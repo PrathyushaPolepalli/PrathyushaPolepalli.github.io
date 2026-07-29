@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img">
+  <title>Conceptual RoPE context-extension mappings</title>
+  <desc>Four panels compare direct extrapolation, position interpolation, global frequency rescaling, and frequency-band-specific scaling.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fffdf8; }
+      .panel { fill: #f4efe6; stroke: #d8d0c3; stroke-width: 2; }
+      .axis { stroke: #7c7469; stroke-width: 2; }
+      .native { stroke: #315f7d; stroke-width: 6; }
+      .target { stroke: #b6432f; stroke-width: 6; }
+      .band1 { stroke: #b6432f; stroke-width: 5; }
+      .band2 { stroke: #6e4f7d; stroke-width: 5; }
+      .band3 { stroke: #44735a; stroke-width: 5; }
+      .dash { stroke-dasharray: 10 7; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 700 17px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="700"/>
+  <text class="title" x="55" y="48">Context extension changes how target positions map to phase</text>
+
+  <rect class="panel" x="45" y="90" width="535" height="245" rx="20"/>
+  <rect class="panel" x="620" y="90" width="535" height="245" rx="20"/>
+  <rect class="panel" x="45" y="375" width="535" height="245" rx="20"/>
+  <rect class="panel" x="620" y="375" width="535" height="245" rx="20"/>
+
+  <text class="label" x="75" y="130">Direct extrapolation</text>
+  <line class="axis" x1="90" y1="250" x2="535" y2="250"/>
+  <line class="native" x1="105" y1="250" x2="300" y2="250"/>
+  <line class="target dash" x1="300" y1="250" x2="520" y2="250"/>
+  <text class="small" x="105" y="280">0</text>
+  <text class="small" x="285" y="280">Ltrain</text>
+  <text class="small" x="480" y="280">Ltarget</text>
+  <text class="small" x="310" y="185" text-anchor="middle">same frequencies beyond training range</text>
+
+  <text class="label" x="650" y="130">Position Interpolation</text>
+  <line class="axis" x1="665" y1="250" x2="1110" y2="250"/>
+  <line class="target" x1="680" y1="250" x2="1095" y2="250"/>
+  <line class="native" x1="680" y1="205" x2="1095" y2="205"/>
+  <text class="small" x="680" y="280">0</text>
+  <text class="small" x="1050" y="280">Ltarget</text>
+  <text class="small" x="887" y="180" text-anchor="middle">compress target positions into native phase range</text>
+
+  <text class="label" x="75" y="415">Base / frequency rescaling</text>
+  <line class="axis" x1="90" y1="535" x2="535" y2="535"/>
+  <line class="native" x1="110" y1="500" x2="520" y2="500"/>
+  <line class="target" x1="110" y1="565" x2="520" y2="565"/>
+  <text class="small" x="315" y="475" text-anchor="middle">native phase progression</text>
+  <text class="small" x="315" y="600" text-anchor="middle">modified progression from a new base or schedule</text>
+
+  <text class="label" x="650" y="415">Frequency-band-specific methods</text>
+  <line class="axis" x1="665" y1="535" x2="1110" y2="535"/>
+  <line class="band1" x1="685" y1="485" x2="1090" y2="500"/>
+  <line class="band2" x1="685" y1="535" x2="1090" y2="555"/>
+  <line class="band3" x1="685" y1="585" x2="1090" y2="610"/>
+  <text class="small" x="887" y="465" text-anchor="middle">fast, medium, and slow bands can scale differently</text>
+
+  <text class="small" x="600" y="665" text-anchor="middle">Conceptual only: dynamic/NTK-aware, YaRN, and LongRoPE use checkpoint-specific formulas and parameters.</text>
+</svg>

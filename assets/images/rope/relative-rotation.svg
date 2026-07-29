@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img">
+  <title>RoPE rotations and relative angular displacement</title>
+  <desc>A query and key are rotated in separate two-dimensional planes by position-dependent angles. Their interaction depends on the angular difference associated with n minus m.</desc>
+  <defs>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b6432f"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#315f7d"/>
+    </marker>
+    <style>
+      .bg { fill: #fffdf8; }
+      .panel { fill: #f4efe6; stroke: #d8d0c3; stroke-width: 2; }
+      .axis { stroke: #a59c90; stroke-width: 2; }
+      .circle { fill: none; stroke: #d8d0c3; stroke-width: 2; }
+      .q { stroke: #b6432f; stroke-width: 6; marker-end: url(#arrow-red); }
+      .k { stroke: #315f7d; stroke-width: 6; marker-end: url(#arrow-blue); }
+      .arc { fill: none; stroke: #7c7469; stroke-width: 3; stroke-dasharray: 8 6; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 700 18px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .red { fill: #b6432f; }
+      .blue { fill: #315f7d; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="700"/>
+  <text class="title" x="55" y="48">Absolute phase in each vector, relative phase in their dot product</text>
+
+  <rect class="panel" x="55" y="85" width="500" height="520" rx="22"/>
+  <rect class="panel" x="645" y="85" width="500" height="520" rx="22"/>
+  <text class="label" x="85" y="125">Before RoPE</text>
+  <text class="label" x="675" y="125">After position-dependent rotation</text>
+
+  <circle class="circle" cx="305" cy="355" r="175"/>
+  <line class="axis" x1="105" y1="355" x2="505" y2="355"/>
+  <line class="axis" x1="305" y1="155" x2="305" y2="555"/>
+  <line class="q" x1="305" y1="355" x2="440" y2="245"/>
+  <line class="k" x1="305" y1="355" x2="450" y2="425"/>
+  <text class="label red" x="445" y="230">q</text>
+  <text class="label blue" x="460" y="445">k</text>
+  <text class="small" x="305" y="580" text-anchor="middle">content determines radius and initial direction</text>
+
+  <circle class="circle" cx="895" cy="355" r="175"/>
+  <line class="axis" x1="695" y1="355" x2="1095" y2="355"/>
+  <line class="axis" x1="895" y1="155" x2="895" y2="555"/>
+  <line class="q" x1="895" y1="355" x2="800" y2="215"/>
+  <line class="k" x1="895" y1="355" x2="1045" y2="265"/>
+  <text class="label red" x="760" y="205">R(mθ)q</text>
+  <text class="label blue" x="1020" y="245">R(nθ)k</text>
+
+  <path class="arc" d="M815 238 A150 150 0 0 1 1028 278"/>
+  <text class="label" x="920" y="185" text-anchor="middle">(n - m)θ</text>
+  <text class="small" x="895" y="580" text-anchor="middle">the score sees the phase difference</text>
+
+  <text class="small" x="600" y="655" text-anchor="middle">Each rotary pair has its own θ; the model combines many relative phases.</text>
+</svg>

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" role="img">
+  <title>A bank of RoPE angular frequencies</title>
+  <desc>Four circular coordinate planes rotate at progressively slower frequencies, representing the frequency schedule for an eight-dimensional rotary subspace.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b6432f"/>
+    </marker>
+    <style>
+      .bg { fill: #fffdf8; }
+      .panel { fill: #f4efe6; stroke: #d8d0c3; stroke-width: 2; }
+      .circle { fill: #ffffff; stroke: #a59c90; stroke-width: 2; }
+      .axis { stroke: #d8d0c3; stroke-width: 1.5; }
+      .hand { stroke: #b6432f; stroke-width: 5; marker-end: url(#arrow); }
+      .history { fill: none; stroke: #315f7d; stroke-width: 3; stroke-dasharray: 7 6; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 700 17px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="680"/>
+  <text class="title" x="55" y="48">Different coordinate pairs rotate at different rates</text>
+
+  <rect class="panel" x="45" y="90" width="260" height="500" rx="20"/>
+  <rect class="panel" x="330" y="90" width="260" height="500" rx="20"/>
+  <rect class="panel" x="615" y="90" width="260" height="500" rx="20"/>
+  <rect class="panel" x="900" y="90" width="260" height="500" rx="20"/>
+
+  <text class="label" x="175" y="130" text-anchor="middle">Pair 0</text>
+  <text class="label" x="460" y="130" text-anchor="middle">Pair 1</text>
+  <text class="label" x="745" y="130" text-anchor="middle">Pair 2</text>
+  <text class="label" x="1030" y="130" text-anchor="middle">Pair 3</text>
+
+  <g>
+    <circle class="circle" cx="175" cy="300" r="95"/>
+    <line class="axis" x1="70" y1="300" x2="280" y2="300"/>
+    <line class="axis" x1="175" y1="195" x2="175" y2="405"/>
+    <path class="history" d="M245 365 A95 95 0 1 1 258 255"/>
+    <line class="hand" x1="175" y1="300" x2="242" y2="235"/>
+  </g>
+
+  <g>
+    <circle class="circle" cx="460" cy="300" r="95"/>
+    <line class="axis" x1="355" y1="300" x2="565" y2="300"/>
+    <line class="axis" x1="460" y1="195" x2="460" y2="405"/>
+    <path class="history" d="M545 343 A95 95 0 0 1 515 223"/>
+    <line class="hand" x1="460" y1="300" x2="530" y2="238"/>
+  </g>
+
+  <g>
+    <circle class="circle" cx="745" cy="300" r="95"/>
+    <line class="axis" x1="640" y1="300" x2="850" y2="300"/>
+    <line class="axis" x1="745" y1="195" x2="745" y2="405"/>
+    <path class="history" d="M835 330 A95 95 0 0 1 838 280"/>
+    <line class="hand" x1="745" y1="300" x2="838" y2="280"/>
+  </g>
+
+  <g>
+    <circle class="circle" cx="1030" cy="300" r="95"/>
+    <line class="axis" x1="925" y1="300" x2="1135" y2="300"/>
+    <line class="axis" x1="1030" y1="195" x2="1030" y2="405"/>
+    <path class="history" d="M1124 309 A95 95 0 0 1 1125 300"/>
+    <line class="hand" x1="1030" y1="300" x2="1125" y2="295"/>
+  </g>
+
+  <text class="label" x="175" y="455" text-anchor="middle">θ = 1</text>
+  <text class="small" x="175" y="485" text-anchor="middle">period ≈ 6.28 tokens</text>
+  <text class="small" x="175" y="520" text-anchor="middle">fast-changing phase</text>
+
+  <text class="label" x="460" y="455" text-anchor="middle">θ = 0.1</text>
+  <text class="small" x="460" y="485" text-anchor="middle">period ≈ 62.8 tokens</text>
+  <text class="small" x="460" y="520" text-anchor="middle">medium-range phase</text>
+
+  <text class="label" x="745" y="455" text-anchor="middle">θ = 0.01</text>
+  <text class="small" x="745" y="485" text-anchor="middle">period ≈ 628 tokens</text>
+  <text class="small" x="745" y="520" text-anchor="middle">slow-changing phase</text>
+
+  <text class="label" x="1030" y="455" text-anchor="middle">θ = 0.001</text>
+  <text class="small" x="1030" y="485" text-anchor="middle">period ≈ 6,283 tokens</text>
+  <text class="small" x="1030" y="520" text-anchor="middle">very slow phase</text>
+
+  <text class="small" x="600" y="635" text-anchor="middle">Illustrative d = 8, base = 10,000. Real checkpoints use more pairs and may use a different base.</text>
+</svg>

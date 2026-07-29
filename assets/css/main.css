@@ -619,6 +619,16 @@ select {
   border-radius: 0;
 }
 
+.prose pre.math-block {
+  color: var(--ink-blue);
+  background: #edf2f4;
+  border: 1px solid #cbd9e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.96rem;
+  line-height: 1.75;
+  text-align: center;
+}
+
 .prose table {
   display: block;
   width: 100%;
