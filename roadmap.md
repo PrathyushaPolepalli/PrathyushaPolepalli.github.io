@@ -23,7 +23,7 @@ Articles will use original prose and diagrams, cite primary sources, distinguish
 
 ### Weeks 1–4: Build the machine-level mental model
 
-1. **Linux, Networking, and Storage for AI Engineers**<br>
+1. **[Linux, Networking, and Storage for AI Engineers]({{ '/posts/2026-07-29-linux-networking-storage-ai-engineers/' | relative_url }})** — Published July 29, 2026<br>
    Processes, virtual memory, page cache, NUMA, filesystems, sockets, TCP, DNS, block storage, object storage, and the diagnostic tools that connect them.<br>
    *Build artifact:* a repeatable host and I/O diagnostic checklist.
 

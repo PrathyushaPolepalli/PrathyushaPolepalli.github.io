@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" role="img">
+  <title>Overlapped AI input pipeline</title>
+  <desc>A timeline shows storage or network delivery, CPU processing, pinned-memory staging, host-to-device copy, and GPU compute for consecutive batches. A slow input stage creates a GPU idle gap.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fffdf8; }
+      .grid { stroke: #d8d0c3; stroke-width: 1; }
+      .axis { stroke: #7c7469; stroke-width: 2; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 700 16px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .white { fill: #fffdf8; }
+      .storage { fill: #dce9df; stroke: #44735a; stroke-width: 2; }
+      .cpu { fill: #e6edf1; stroke: #315f7d; stroke-width: 2; }
+      .pin { fill: #f7dfd8; stroke: #b6432f; stroke-width: 2; }
+      .copy { fill: #e8ddf0; stroke: #6e4f7d; stroke-width: 2; }
+      .gpu { fill: #18334b; stroke: #18334b; stroke-width: 2; }
+      .gap { fill: #fff3d6; stroke: #b88624; stroke-width: 2; stroke-dasharray: 8 6; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="660"/>
+  <text class="title" x="55" y="48">Throughput depends on overlap and the slowest sustained stage</text>
+
+  <line class="axis" x1="245" y1="95" x2="1140" y2="95"/>
+  <text class="small" x="1138" y="78" text-anchor="end">time →</text>
+
+  <g>
+    <line class="grid" x1="245" y1="95" x2="245" y2="590"/>
+    <line class="grid" x1="395" y1="95" x2="395" y2="590"/>
+    <line class="grid" x1="545" y1="95" x2="545" y2="590"/>
+    <line class="grid" x1="695" y1="95" x2="695" y2="590"/>
+    <line class="grid" x1="845" y1="95" x2="845" y2="590"/>
+    <line class="grid" x1="995" y1="95" x2="995" y2="590"/>
+    <line class="grid" x1="1140" y1="95" x2="1140" y2="590"/>
+  </g>
+
+  <text class="label" x="55" y="155">Storage / network</text>
+  <text class="small" x="55" y="178">read source bytes</text>
+  <rect class="storage" x="260" y="125" width="210" height="70" rx="12"/>
+  <text class="label" x="365" y="167" text-anchor="middle">Batch A</text>
+  <rect class="storage" x="485" y="125" width="290" height="70" rx="12"/>
+  <text class="label" x="630" y="167" text-anchor="middle">Batch B: slow read</text>
+  <rect class="storage" x="790" y="125" width="210" height="70" rx="12"/>
+  <text class="label" x="895" y="167" text-anchor="middle">Batch C</text>
+
+  <text class="label" x="55" y="255">CPU workers</text>
+  <text class="small" x="55" y="278">decode + transform</text>
+  <rect class="cpu" x="410" y="225" width="190" height="70" rx="12"/>
+  <text class="label" x="505" y="267" text-anchor="middle">Batch A</text>
+  <rect class="cpu" x="690" y="225" width="190" height="70" rx="12"/>
+  <text class="label" x="785" y="267" text-anchor="middle">Batch B</text>
+  <rect class="cpu" x="940" y="225" width="170" height="70" rx="12"/>
+  <text class="label" x="1025" y="267" text-anchor="middle">Batch C</text>
+
+  <text class="label" x="55" y="355">Pinned staging</text>
+  <text class="small" x="55" y="378">bounded host queue</text>
+  <rect class="pin" x="565" y="325" width="115" height="70" rx="12"/>
+  <text class="label" x="622" y="367" text-anchor="middle">A</text>
+  <rect class="pin" x="845" y="325" width="115" height="70" rx="12"/>
+  <text class="label" x="902" y="367" text-anchor="middle">B</text>
+  <rect class="pin" x="1075" y="325" width="65" height="70" rx="12"/>
+  <text class="label" x="1107" y="367" text-anchor="middle">C</text>
+
+  <text class="label" x="55" y="455">Host → device</text>
+  <text class="small" x="55" y="478">DMA copy</text>
+  <rect class="copy" x="650" y="425" width="95" height="70" rx="12"/>
+  <text class="label" x="697" y="467" text-anchor="middle">A</text>
+  <rect class="copy" x="930" y="425" width="95" height="70" rx="12"/>
+  <text class="label" x="977" y="467" text-anchor="middle">B</text>
+
+  <text class="label" x="55" y="555">GPU compute</text>
+  <text class="small" x="55" y="578">consume batch</text>
+  <rect class="gpu" x="720" y="525" width="170" height="70" rx="12"/>
+  <text class="label white" x="805" y="567" text-anchor="middle">Batch A</text>
+  <rect class="gap" x="890" y="525" width="65" height="70" rx="12"/>
+  <text class="small" x="922" y="554" text-anchor="middle">idle</text>
+  <text class="small" x="922" y="575" text-anchor="middle">gap</text>
+  <rect class="gpu" x="1000" y="525" width="140" height="70" rx="12"/>
+  <text class="label white" x="1070" y="567" text-anchor="middle">Batch B</text>
+
+  <text class="small" x="600" y="632" text-anchor="middle">A longer upstream stage delays the next ready batch even when the GPU itself is healthy.</text>
+</svg>

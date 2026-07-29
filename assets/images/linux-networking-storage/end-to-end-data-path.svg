@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img">
+  <title>End-to-end AI data path through Linux</title>
+  <desc>Remote and local storage feed the Linux kernel, user-space data workers, pinned host memory, GPU memory, and kernels. A dashed line shows a conditional GPUDirect Storage path.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b6432f"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#315f7d"/>
+    </marker>
+    <style>
+      .bg { fill: #fffdf8; }
+      .lane { fill: #f4efe6; stroke: #d8d0c3; stroke-width: 2; }
+      .box { fill: #ffffff; stroke: #7c7469; stroke-width: 2; rx: 14; }
+      .kernel { fill: #e6edf1; stroke: #315f7d; }
+      .gpu { fill: #18334b; stroke: #18334b; }
+      .accent { fill: #f7dfd8; stroke: #b6432f; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .lane-title { font: 700 18px Inter, Arial, sans-serif; fill: #68665f; }
+      .label { font: 700 17px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .white { fill: #fffdf8; }
+      .arrow { fill: none; stroke: #b6432f; stroke-width: 4; marker-end: url(#arrow); }
+      .arrow-blue { fill: none; stroke: #315f7d; stroke-width: 4; marker-end: url(#arrow-blue); }
+      .dashed { stroke-dasharray: 10 8; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="700"/>
+  <text class="title" x="55" y="48">One batch crosses several independently constrained stages</text>
+
+  <rect class="lane" x="45" y="75" width="230" height="560" rx="20"/>
+  <rect class="lane" x="305" y="75" width="270" height="560" rx="20"/>
+  <rect class="lane" x="605" y="75" width="300" height="560" rx="20"/>
+  <rect class="lane" x="935" y="75" width="220" height="560" rx="20"/>
+
+  <text class="lane-title" x="70" y="112">Data sources</text>
+  <text class="lane-title" x="330" y="112">Linux kernel</text>
+  <text class="lane-title" x="630" y="112">User space</text>
+  <text class="lane-title" x="960" y="112">Accelerator</text>
+
+  <rect class="box" x="70" y="150" width="180" height="90"/>
+  <text class="label" x="160" y="185" text-anchor="middle">Object store</text>
+  <text class="small" x="160" y="212" text-anchor="middle">or remote service</text>
+
+  <rect class="box" x="70" y="290" width="180" height="90"/>
+  <text class="label" x="160" y="325" text-anchor="middle">Network FS</text>
+  <text class="small" x="160" y="352" text-anchor="middle">shared dataset</text>
+
+  <rect class="box" x="70" y="430" width="180" height="90"/>
+  <text class="label" x="160" y="465" text-anchor="middle">Local NVMe</text>
+  <text class="small" x="160" y="492" text-anchor="middle">block-backed files</text>
+
+  <rect class="box kernel" x="335" y="145" width="210" height="95"/>
+  <text class="label" x="440" y="180" text-anchor="middle">TCP/IP + sockets</text>
+  <text class="small" x="440" y="207" text-anchor="middle">queues, buffers, loss</text>
+
+  <rect class="box kernel" x="335" y="285" width="210" height="95"/>
+  <text class="label" x="440" y="320" text-anchor="middle">VFS + filesystem</text>
+  <text class="small" x="440" y="347" text-anchor="middle">paths and metadata</text>
+
+  <rect class="box kernel" x="335" y="425" width="210" height="105"/>
+  <text class="label" x="440" y="460" text-anchor="middle">Page cache</text>
+  <text class="small" x="440" y="486" text-anchor="middle">faults, reclaim,</text>
+  <text class="small" x="440" y="507" text-anchor="middle">read-ahead, writeback</text>
+
+  <rect class="box" x="635" y="145" width="240" height="100"/>
+  <text class="label" x="755" y="180" text-anchor="middle">Data-loader workers</text>
+  <text class="small" x="755" y="207" text-anchor="middle">read, parse, decode</text>
+
+  <rect class="box" x="635" y="290" width="240" height="100"/>
+  <text class="label" x="755" y="325" text-anchor="middle">Transforms + collate</text>
+  <text class="small" x="755" y="352" text-anchor="middle">CPU and memory bandwidth</text>
+
+  <rect class="box accent" x="635" y="435" width="240" height="100"/>
+  <text class="label" x="755" y="470" text-anchor="middle">Pinned host batch</text>
+  <text class="small" x="755" y="497" text-anchor="middle">bounded staging memory</text>
+
+  <rect class="box gpu" x="965" y="220" width="160" height="105"/>
+  <text class="label white" x="1045" y="258" text-anchor="middle">GPU memory</text>
+  <text class="small white" x="1045" y="286" text-anchor="middle">model + batch</text>
+
+  <rect class="box gpu" x="965" y="400" width="160" height="105"/>
+  <text class="label white" x="1045" y="438" text-anchor="middle">GPU kernels</text>
+  <text class="small white" x="1045" y="466" text-anchor="middle">consume next batch</text>
+
+  <path class="arrow" d="M250 195 C290 195 295 192 335 192"/>
+  <path class="arrow" d="M250 335 C290 335 295 332 335 332"/>
+  <path class="arrow" d="M250 475 C290 475 295 478 335 478"/>
+  <path class="arrow-blue" d="M545 192 C585 192 595 195 635 195"/>
+  <path class="arrow-blue" d="M545 332 C585 332 595 340 635 340"/>
+  <path class="arrow-blue" d="M545 478 C585 478 595 485 635 485"/>
+  <path class="arrow" d="M755 245 L755 290"/>
+  <path class="arrow" d="M755 390 L755 435"/>
+  <path class="arrow" d="M875 485 C925 485 920 275 965 275"/>
+  <path class="arrow" d="M1045 325 L1045 400"/>
+
+  <path class="arrow-blue dashed" d="M250 515 C460 610 790 610 965 305"/>
+  <text class="small" x="580" y="620" text-anchor="middle">Conditional GDS-compatible DMA path; verify support and active mode</text>
+
+  <text class="small" x="755" y="575" text-anchor="middle">NUMA placement and cgroup limits apply across the host stages</text>
+</svg>

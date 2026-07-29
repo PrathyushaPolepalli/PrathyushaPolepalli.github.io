@@ -647,6 +647,22 @@ select {
   border-radius: 12px;
 }
 
+.prose figure {
+  margin: 2.5rem 0;
+}
+
+.prose figure img {
+  margin: 0 auto 0.8rem;
+  background: var(--surface);
+}
+
+.prose figcaption {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .prose hr {
   width: 35%;
   margin: 4rem auto;

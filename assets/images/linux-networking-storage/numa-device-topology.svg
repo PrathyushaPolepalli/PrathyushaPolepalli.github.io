@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img">
+  <title>NUMA and device topology in a two-socket AI server</title>
+  <desc>Two CPU sockets have local memory and separate PCIe roots. GPUs, a NIC, and NVMe devices attach to different roots, while a cross-socket link connects the nodes.</desc>
+  <defs>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#44735a"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b6432f"/>
+    </marker>
+    <style>
+      .bg { fill: #fffdf8; }
+      .node { fill: #f4efe6; stroke: #7c7469; stroke-width: 2; }
+      .cpu { fill: #18334b; }
+      .mem { fill: #dce9df; stroke: #44735a; stroke-width: 2; }
+      .device { fill: #ffffff; stroke: #315f7d; stroke-width: 2; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .node-title { font: 700 20px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 700 17px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .white { fill: #fffdf8; }
+      .local { fill: none; stroke: #44735a; stroke-width: 5; marker-end: url(#arrow-green); }
+      .cross { fill: none; stroke: #b6432f; stroke-width: 6; stroke-dasharray: 12 8; marker-end: url(#arrow-orange); }
+      .pcie { fill: none; stroke: #315f7d; stroke-width: 4; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="700"/>
+  <text class="title" x="55" y="48">“Same host” is not one uniform distance</text>
+
+  <rect class="node" x="55" y="85" width="500" height="555" rx="24"/>
+  <rect class="node" x="645" y="85" width="500" height="555" rx="24"/>
+  <text class="node-title" x="85" y="125">NUMA node 0</text>
+  <text class="node-title" x="675" y="125">NUMA node 1</text>
+
+  <rect class="cpu" x="105" y="170" width="180" height="105" rx="16"/>
+  <text class="label white" x="195" y="210" text-anchor="middle">CPU socket 0</text>
+  <text class="small white" x="195" y="240" text-anchor="middle">cores + memory controller</text>
+
+  <rect class="mem" x="325" y="170" width="180" height="105" rx="16"/>
+  <text class="label" x="415" y="210" text-anchor="middle">Local RAM 0</text>
+  <text class="small" x="415" y="240" text-anchor="middle">default local allocation</text>
+
+  <rect class="cpu" x="695" y="170" width="180" height="105" rx="16"/>
+  <text class="label white" x="785" y="210" text-anchor="middle">CPU socket 1</text>
+  <text class="small white" x="785" y="240" text-anchor="middle">cores + memory controller</text>
+
+  <rect class="mem" x="915" y="170" width="180" height="105" rx="16"/>
+  <text class="label" x="1005" y="210" text-anchor="middle">Local RAM 1</text>
+  <text class="small" x="1005" y="240" text-anchor="middle">default local allocation</text>
+
+  <path class="local" d="M285 222 L325 222"/>
+  <path class="local" d="M875 222 L915 222"/>
+
+  <text class="small" x="305" y="200" text-anchor="middle">local</text>
+  <text class="small" x="895" y="200" text-anchor="middle">local</text>
+
+  <path class="cross" d="M285 260 C430 330 625 330 695 260"/>
+  <text class="small" x="590" y="345" text-anchor="middle">inter-socket path: additional latency and shared bandwidth</text>
+
+  <path class="pcie" d="M195 275 L195 355 L415 355"/>
+  <path class="pcie" d="M785 275 L785 355 L1005 355"/>
+  <text class="small" x="305" y="380" text-anchor="middle">PCIe root 0</text>
+  <text class="small" x="895" y="380" text-anchor="middle">PCIe root 1</text>
+
+  <rect class="device" x="85" y="420" width="180" height="90" rx="14"/>
+  <text class="label" x="175" y="455" text-anchor="middle">GPU 0</text>
+  <text class="small" x="175" y="482" text-anchor="middle">local to node 0</text>
+
+  <rect class="device" x="335" y="420" width="180" height="90" rx="14"/>
+  <text class="label" x="425" y="455" text-anchor="middle">NVMe 0</text>
+  <text class="small" x="425" y="482" text-anchor="middle">local to node 0</text>
+
+  <rect class="device" x="675" y="420" width="180" height="90" rx="14"/>
+  <text class="label" x="765" y="455" text-anchor="middle">GPU 1</text>
+  <text class="small" x="765" y="482" text-anchor="middle">local to node 1</text>
+
+  <rect class="device" x="925" y="420" width="180" height="90" rx="14"/>
+  <text class="label" x="1015" y="455" text-anchor="middle">NIC</text>
+  <text class="small" x="1015" y="482" text-anchor="middle">local to node 1</text>
+
+  <path class="pcie" d="M195 355 L175 420"/>
+  <path class="pcie" d="M415 355 L425 420"/>
+  <path class="pcie" d="M785 355 L765 420"/>
+  <path class="pcie" d="M1005 355 L1015 420"/>
+
+  <path class="cross" d="M175 510 C300 610 875 610 1015 510"/>
+  <text class="small" x="595" y="590" text-anchor="middle">Example: GPU 0 to NIC traffic crosses roots and sockets</text>
+
+  <text class="small" x="600" y="660" text-anchor="middle">Real platforms may add PCIe switches, NVLink/NVSwitch, multiple NICs, and different CPU interconnects.</text>
+</svg>
