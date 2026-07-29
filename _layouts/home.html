@@ -1,0 +1,80 @@
+---
+layout: default
+---
+<section class="hero">
+  <div class="hero__content">
+    <p class="eyebrow">Prathyusha Polepalli's research notebook</p>
+    <h1>Understand the systems that make AI fast, scalable, and reliable.</h1>
+    <p class="hero__summary">{{ site.description }}</p>
+    <div class="hero__actions">
+      <a class="button button--primary" href="#latest-notes">Read the notes</a>
+      <a class="button button--secondary" href="{{ '/roadmap/' | relative_url }}">Explore the roadmap</a>
+    </div>
+  </div>
+  <div class="hero__diagram" aria-label="AI systems stack illustration">
+    <div>Applications</div>
+    <div>Serving &amp; inference</div>
+    <div>Distributed runtime</div>
+    <div>GPU, network &amp; storage</div>
+  </div>
+</section>
+
+<section class="home-intro content-width prose">
+  {{ content }}
+</section>
+
+<section class="section content-width" aria-labelledby="research-tracks">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Learning paths</p>
+      <h2 id="research-tracks">Research tracks</h2>
+    </div>
+    <p>Each track builds from first principles toward production trade-offs and reproducible experiments.</p>
+  </div>
+
+  <div class="track-grid">
+    {% for series in site.data.series %}
+      <article class="track-card">
+        <span class="track-card__number">{{ forloop.index | prepend: "0" }}</span>
+        <h3>{{ series.title }}</h3>
+        <p>{{ series.description }}</p>
+        <a href="{{ '/roadmap/' | relative_url }}#{{ series.slug }}">View planned essays <span aria-hidden="true">&rarr;</span></a>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section section--notes" id="latest-notes">
+  <div class="content-width">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Long-form explanations</p>
+        <h2>Latest notes</h2>
+      </div>
+      <p>Architecture diagrams, memory math, benchmarks, implementation details, and references.</p>
+    </div>
+
+    <div class="post-list">
+      {% for post in site.posts %}
+        <article class="post-card">
+          <div class="post-card__meta">
+            <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%b %-d, %Y" }}</time>
+            <span>{{ post.content | number_of_words | divided_by: 220 | plus: 1 }} min read</span>
+          </div>
+          <h3><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h3>
+          <p>{{ post.description | default: post.excerpt | strip_html | strip_newlines | truncate: 220 }}</p>
+          <div class="post-card__footer">
+            <div class="tag-list" aria-label="Tags">
+              {% for tag in post.tags limit: 4 %}
+                <span>{{ tag }}</span>
+              {% endfor %}
+            </div>
+            <a class="text-link" href="{{ post.url | relative_url }}">Read note <span aria-hidden="true">&rarr;</span></a>
+          </div>
+        </article>
+      {% else %}
+        <p>The first research note is in progress. The full publication plan is available on the <a href="{{ '/roadmap/' | relative_url }}">roadmap</a>.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,36 @@
+title: Systems for AI
+tagline: Practical notes on the infrastructure behind modern AI
+description: >-
+  Deep, practical explanations of GPU systems, distributed training,
+  high-performance inference, LLM serving, and production AI infrastructure.
+author:
+  name: Prathyusha Polepalli
+  github: PrathyushaPolepalli
+url: "https://prathyushapolepalli.github.io"
+baseurl: ""
+repository: PrathyushaPolepalli/PrathyushaPolepalli.github.io
+lang: en
+timezone: America/Los_Angeles
+
+permalink: /posts/:year-:month-:day-:title/
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: page
+
+exclude:
+  - README.md
+  - POST_TEMPLATE.md

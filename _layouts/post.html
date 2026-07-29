@@ -1,0 +1,54 @@
+---
+layout: default
+---
+<article class="post-shell" data-post>
+  <header class="post-header content-width">
+    {% if page.series %}<p class="eyebrow">{{ page.series }}</p>{% endif %}
+    <h1>{{ page.title }}</h1>
+    {% if page.description %}<p class="post-header__summary">{{ page.description }}</p>{% endif %}
+    <div class="post-meta">
+      <span>By {{ site.author.name }}</span>
+      <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %-d, %Y" }}</time>
+      {% if page.updated %}
+        <span>Updated {{ page.updated | date: "%B %-d, %Y" }}</span>
+      {% endif %}
+      <span>{{ content | number_of_words | divided_by: 220 | plus: 1 }} min read</span>
+    </div>
+    {% if page.tags %}
+      <div class="tag-list" aria-label="Tags">
+        {% for tag in page.tags %}<span>{{ tag }}</span>{% endfor %}
+      </div>
+    {% endif %}
+  </header>
+
+  <div class="post-grid content-width">
+    <aside class="toc-panel" data-toc-panel hidden>
+      <p>On this page</p>
+      <nav data-toc aria-label="Table of contents"></nav>
+    </aside>
+    <div class="prose post-content" data-post-content>
+      {{ content }}
+    </div>
+  </div>
+
+  <footer class="post-footer content-width">
+    <p>
+      Found an error or have a useful source?
+      <a href="https://github.com/{{ site.repository }}/issues">Open an issue on GitHub</a>.
+    </p>
+    <nav class="post-pagination" aria-label="More posts">
+      {% if page.previous %}
+        <a href="{{ page.previous.url | relative_url }}">
+          <span>Previous</span>
+          {{ page.previous.title }}
+        </a>
+      {% endif %}
+      {% if page.next %}
+        <a href="{{ page.next.url | relative_url }}">
+          <span>Next</span>
+          {{ page.next.title }}
+        </a>
+      {% endif %}
+    </nav>
+  </footer>
+</article>

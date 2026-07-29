@@ -1,0 +1,19 @@
+- title: Compute Foundations
+  slug: compute-foundations
+  description: GPU architecture, CUDA memory, quantization, Linux, networking, and storage.
+
+- title: Fast LLM Inference
+  slug: fast-llm-inference
+  description: Batching, KV caches, decoding, inference engines, throughput, and capacity planning.
+
+- title: Distributed AI
+  slug: distributed-ai
+  description: NCCL, InfiniBand, parallelism, distributed training, and parameter-efficient tuning.
+
+- title: Serving Platforms
+  slug: serving-platforms
+  description: Containers, Kubernetes, model servers, observability, CI/CD, and model registries.
+
+- title: Production LLM Systems
+  slug: production-llm-systems
+  description: RAG, caching, routing, evaluation, agents, streaming, and security.

@@ -1,0 +1,10 @@
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <p>&copy; {{ site.time | date: "%Y" }} {{ site.author.name }}. Personal research notes; views are my own.</p>
+    <div class="site-footer__links">
+      <a href="{{ '/feed.xml' | relative_url }}">RSS</a>
+      <a href="{{ '/roadmap/' | relative_url }}">Roadmap</a>
+      <a href="https://github.com/{{ site.author.github }}">GitHub</a>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,18 @@
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-brand" href="{{ '/' | relative_url }}" aria-label="{{ site.title }} home">
+      <span class="site-brand__mark" aria-hidden="true">PP</span>
+      <span>
+        <strong>{{ site.title }}</strong>
+        <small>{{ site.tagline }}</small>
+      </span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a href="{{ '/' | relative_url }}">Notes</a>
+      <a href="{{ '/roadmap/' | relative_url }}">Roadmap</a>
+      <a href="{{ '/about/' | relative_url }}">About</a>
+      <a href="https://github.com/{{ site.author.github }}" rel="me">GitHub</a>
+    </nav>
+  </div>
+</header>
