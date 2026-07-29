@@ -673,6 +673,57 @@ select {
   text-align: center;
 }
 
+.prose details.knowledge-check {
+  margin: 0.8rem 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+.prose details.knowledge-check[open] {
+  border-color: rgba(182, 67, 47, 0.5);
+}
+
+.prose details.knowledge-check summary {
+  display: flex;
+  padding: 1rem 1.1rem;
+  color: var(--ink-blue);
+  cursor: pointer;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-weight: 750;
+  line-height: 1.45;
+  list-style: none;
+}
+
+.prose details.knowledge-check summary::-webkit-details-marker {
+  display: none;
+}
+
+.prose details.knowledge-check summary::before {
+  content: "\203A";
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 1.35rem;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 150ms ease;
+}
+
+.prose details.knowledge-check[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.prose .knowledge-check__answer {
+  padding: 0.9rem 1.1rem 1rem 2.95rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+}
+
+.prose .knowledge-check__answer p {
+  margin: 0;
+}
+
 .prose hr {
   width: 35%;
   margin: 4rem auto;
@@ -867,5 +918,9 @@ select {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .prose details.knowledge-check summary::before {
+    transition: none;
   }
 }

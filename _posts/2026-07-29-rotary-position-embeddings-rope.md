@@ -577,6 +577,80 @@ When implementing or adopting RoPE, verify:
 14. Do full-sequence and cached-decoding logits match?
 15. Has quality been evaluated across the full target context, not only near position zero?
 
+## Quick knowledge check
+
+Open each question to reveal the answer.
+
+<details class="knowledge-check">
+  <summary>1. Which attention tensors does standard RoPE rotate?</summary>
+  <div class="knowledge-check__answer">
+    <p>RoPE rotates queries and keys after projection and head reshaping. Standard RoPE leaves values unchanged.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>2. Why does a RoPE query-key score depend on relative position?</summary>
+  <div class="knowledge-check__answer">
+    <p>Because <code>R(m)^T R(n) = R(n - m)</code>. The query rotation at position <code>m</code> and key rotation at position <code>n</code> combine into one rotation determined by their displacement.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>3. What does norm preservation mean in RoPE?</summary>
+  <div class="knowledge-check__answer">
+    <p>A pure rotation changes a vector's direction but not its Euclidean length. In exact arithmetic, <code>||R(p)x|| = ||x||</code>.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>4. Why does RoPE use several angular frequencies?</summary>
+  <div class="knowledge-check__answer">
+    <p>Fast-rotating coordinate pairs represent short-range phase changes, while slow pairs vary over longer distances. Attention can combine the full frequency bank to reason about offsets at several scales.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>5. Can adjacent-pair and split-half RoPE implementations be swapped for the same checkpoint?</summary>
+  <div class="knowledge-check__answer">
+    <p>No. Both layouts are mathematically valid, but they pair different learned Q/K coordinates. A trained checkpoint must use its original layout unless the relevant weights are converted consistently.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>6. How should positions work when decoding with a KV cache?</summary>
+  <div class="knowledge-check__answer">
+    <p>New queries and keys use their absolute cache positions. Cached keys are already rotated and must not be rotated again. For a simple append-only cache, new positions continue from the number of previously seen tokens.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>7. Why should phase calculations stay in FP32?</summary>
+  <div class="knowledge-check__answer">
+    <p>At large positions, BF16 and FP16 cannot represent every consecutive integer accurately. Low-precision position multiplication and trigonometry can therefore give nearby tokens inaccurate or indistinguishable phases.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>8. Does the RoPE formula guarantee useful inference beyond the training context?</summary>
+  <div class="knowledge-check__answer">
+    <p>No. The formula produces angles for any position, but model weights are trained on a finite distribution of positions and offsets. Long-context quality must be adapted and evaluated.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>9. What trade-off does Position Interpolation make?</summary>
+  <div class="knowledge-check__answer">
+    <p>It maps a longer target context back into the pretrained position range, avoiding direct extrapolation but compressing phase differences between neighboring tokens. The published method uses additional fine-tuning.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>10. How is ALiBi different from RoPE?</summary>
+  <div class="knowledge-check__answer">
+    <p>RoPE rotates query and key coordinates before their dot product. ALiBi leaves Q, K, and V unchanged and adds a head-specific distance bias directly to attention logits.</p>
+  </div>
+</details>
+
 ## Sources, attribution, and diagrams
 
 This article paraphrases technical papers and implementation documentation for explanation. All four diagrams and the PyTorch reference implementation are original work by the author; no source figure, table, prose passage, or code block is reproduced.
@@ -604,4 +678,5 @@ All links were accessed on July 29, 2026.
 
 ## Changelog
 
+- **2026-07-29:** Added a ten-question quick knowledge check.
 - **2026-07-29:** Initial publication.
