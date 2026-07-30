@@ -1,6 +1,6 @@
 ---
 title: "Rotary Position Embeddings (RoPE): From Rotation to Long Context"
-description: "A geometric, mathematical, and practical guide to RoPE, including frequency design, relative-position attention, KV caching, implementation conventions, and context extension."
+description: "A geometric and practical guide to RoPE, including frequency design, relative-position attention, KV caching, and context extension."
 date: 2026-07-29 16:03:00 -0700
 series: Transformer Mechanics
 tags:
@@ -20,17 +20,14 @@ That sentence is compact. Implementing it correctly is not.
 
 A production model also commits to:
 
-- a rotary dimension;
 - a frequency base;
-- a coordinate-pairing convention;
 - a position-ID convention;
 - a long-context scaling recipe;
-- a numerical precision policy; and
 - a KV-cache interpretation.
 
 Change one of those without changing the checkpoint consistently, and the model may still run while producing much worse answers.
 
-This article builds RoPE from a single 2D rotation, derives its relative-position property, implements it in PyTorch, and then follows it into autoregressive decoding and long-context extensions.
+This article builds RoPE from a single 2D rotation, derives its relative-position property, and then follows it into autoregressive decoding and long-context extensions.
 
 <figure>
   <img src="{{ '/assets/images/rope/relative-rotation.svg' | relative_url }}" alt="Two query and key vectors are rotated by angles determined by positions m and n, leaving a relative angular difference based on n minus m.">
@@ -40,14 +37,13 @@ This article builds RoPE from a single 2D rotation, derives its relative-positio
 ## Summary
 
 1. **RoPE rotates queries and keys, not values.** The rotation happens after Q/K projection and head reshaping in a standard decoder stack.
-2. **Each pair of coordinates is a 2D plane.** Position changes the vector's angle in that plane without changing its norm.
+2. **Each pair of coordinates is a 2D plane.** Position changes the vector's angle in that plane.
 3. **The attention score becomes relative.** For query position `m` and key position `n`, the positional part of their dot product depends on `n - m`.
 4. **RoPE is a bank of frequencies.** Some coordinate pairs rotate quickly and others slowly, allowing attention to represent relative offsets at several scales.
-5. **The implementation is part of the checkpoint.** Adjacent-pair and split-half layouts are mathematically valid but not interchangeable after training.
-6. **KV-cache offsets must be absolute and consistent.** Rotate a new query and key at the next cache position; do not rotate cached keys again.
-7. **RoPE has a formula for any position, but that is not a long-context guarantee.** Extrapolation beyond the training distribution can fail.
-8. **Context-extension methods change the position-frequency mapping.** Position Interpolation, dynamic/NTK-aware recipes, YaRN, LongRoPE, and XPos make different trade-offs.
-9. **Precision matters.** Compute positions, inverse frequencies, and trigonometric functions in FP32 before casting to the activation dtype.
+5. **KV-cache offsets must be absolute and consistent.** Rotate a new query and key at the next cache position; do not rotate cached keys again.
+6. **RoPE has a formula for any position, but that is not a long-context guarantee.** Extrapolation beyond the training distribution can fail.
+7. **Context-extension methods change the position-frequency mapping.** Position Interpolation, dynamic/NTK-aware recipes, YaRN, LongRoPE, and XPos make different trade-offs.
+8. **Longer context changes serving capacity.** A larger position range also means a larger KV cache and more attention work.
 
 ## Why attention needs a position signal
 
@@ -159,18 +155,6 @@ q₁₀₀₂ᵀk₁₀₀₁
 
 The absolute phases are different, but the positional part of the score represents the same one-token displacement.
 
-### What “relative” does not mean
-
-The derivation does **not** prove that:
-
-- the entire network is free of absolute-position effects;
-- all relative distances are equally easy to learn;
-- the model will extrapolate to arbitrary context lengths;
-- attention must decay monotonically with distance; or
-- RoPE replaces the need for a causal or padding mask.
-
-It proves a narrower and valuable statement: the positional transform inside a query-key score is translation invariant.
-
 ## RoPE is a bank of frequencies
 
 An attention head has more than two coordinates, so RoPE divides the rotary subspace into pairs. For rotary dimension `d`, pair index `j = 0, …, d/2 - 1`, and frequency base `b`:
@@ -201,12 +185,6 @@ One pair changes phase quickly. Another changes slowly. A real head uses many pa
 
 Each individual pair is periodic, so no single pair uniquely identifies every distance. The combined phase pattern across many frequencies carries the useful signal.
 
-### Rotary dimension is not always head dimension
-
-Some architectures rotate the entire head. Others rotate only a prefix and leave a suffix unchanged. GPT-NeoX, for example, exposes a partial rotary factor in its configuration and implementation ([EleutherAI GPT-NeoX source](https://github.com/EleutherAI/gpt-neox/blob/main/megatron/model/positional_embeddings.py)).
-
-The frequency equation must use the configured **rotary dimension**, not the model hidden size and not automatically the full head size.
-
 ## Where RoPE sits in a decoder
 
 A typical decoder attention block:
@@ -223,18 +201,7 @@ A typical decoder attention block:
   <figcaption>Figure 3. Original diagram by the author, informed by RoFormer and current decoder implementations. RoPE transforms Q and K; standard values remain unrotated.</figcaption>
 </figure>
 
-The [Hugging Face Qwen2 implementation](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2/modular_qwen2.py) provides a concrete example: Q, K, and V can have different head counts under grouped-query attention, but RoPE is applied to Q and K before cache update and attention.
-
-### Grouped-query and multi-query attention
-
-GQA and MQA reduce the number of key/value heads relative to query heads. They do not change RoPE's geometry:
-
-- rotate every query head at the token position;
-- rotate every key head at the same token position;
-- leave value heads unrotated; and
-- repeat or share rotated keys as required by the attention implementation.
-
-Rotate K before key-head repetition. Repeating does not require a new positional transform.
+The [Hugging Face Qwen2 implementation](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2/modular_qwen2.py) provides a concrete example: RoPE is applied to Q and K before cache update and attention, while V remains unchanged.
 
 ## KV caching: positions must continue, not restart
 
@@ -261,188 +228,6 @@ Do not:
 - start decode positions again at zero;
 - apply the offset to Q but not the new K; or
 - rotate old cached keys a second time.
-
-### Sliding windows and eviction
-
-If a serving system evicts old KV blocks, the retained keys still represent their original positions. Keep absolute positions, or rebase every retained key and every future query and key through one mathematically consistent transform.
-
-Renumbering only the incoming query changes its relative phase against every cached key.
-
-### Padding and packed sequences
-
-Padding positions must be masked. For left-padded batches, many model stacks derive valid-token positions from the attention mask so that the first real token receives the expected position.
-
-Packed training needs two aligned controls:
-
-1. reset or continue position IDs according to the training design; and
-2. prevent attention across document boundaries.
-
-Resetting positions without a block-diagonal attention mask allows unrelated documents to interact. With a correct block-diagonal mask, resetting versus continuing positions gives each document a uniform position offset; in pure RoPE Q-K scores that offset cancels within the document. Choose the convention that matches training, batching, and cache handling.
-
-In ideal pure-RoPE attention, shifting every valid token in one isolated sequence by the same constant cancels from query-key scores. Real batching, cache, masking, and checkpoint conventions still demand consistent position IDs.
-
-## Two valid layouts that are not checkpoint-compatible
-
-RoPE needs to decide which coordinates form each 2D plane.
-
-| Layout | Coordinate pairs | Rotation helper shape |
-|---|---|---|
-| Adjacent-pair | `(x₀, x₁)`, `(x₂, x₃)`, … | `[-x₁, x₀, -x₃, x₂, …]` |
-| Split-half | `(x₀, x_d/2)`, `(x₁, x_d/2+1)`, … | `concat(-x[d/2:], x[:d/2])` |
-
-Both implement banks of 2D rotations. They differ by a coordinate permutation.
-
-Before training, either basis is valid. After training, the Q/K projection weights have learned features in that basis. Running a split-half checkpoint with an adjacent-pair helper does not merely change style; it pairs different learned coordinates.
-
-A correct conversion must permute the relevant Q/K weight axes and all associated rotary state consistently. The split-half helper in [GPT-NeoX](https://github.com/EleutherAI/gpt-neox/blob/main/megatron/model/positional_embeddings.py) illustrates one convention.
-
-## A minimal PyTorch implementation
-
-The following implementation is original code derived from the equations above. It uses adjacent pairs and supports Q and K with different head counts.
-
-```python
-import torch
-
-
-def build_rope_cache(max_positions, rotary_dim, base=10_000.0, device=None):
-    """Return FP32 cosine and sine tables shaped [position, pair]."""
-    if rotary_dim % 2 != 0:
-        raise ValueError("rotary_dim must be even")
-
-    pair_index = torch.arange(
-        rotary_dim // 2,
-        device=device,
-        dtype=torch.float32,
-    )
-    inv_freq = base ** (-2.0 * pair_index / rotary_dim)
-    positions = torch.arange(
-        max_positions,
-        device=device,
-        dtype=torch.float32,
-    )
-    angles = positions[:, None] * inv_freq[None, :]
-    return angles.cos(), angles.sin()
-
-
-def apply_rope(q, k, cos_cache, sin_cache, position_ids, rotary_dim):
-    """
-    Rotate Q and K using adjacent coordinate pairs.
-
-    q: [batch, query_heads, sequence, head_dim]
-    k: [batch, key_heads, sequence, head_dim]
-    position_ids: [batch, sequence]
-    """
-    if q.ndim != 4 or k.ndim != 4:
-        raise ValueError("q and k must be rank-4 tensors")
-    if q.shape[0] != k.shape[0] or q.shape[-2:] != k.shape[-2:]:
-        raise ValueError("q and k must share batch, sequence, and head dimensions")
-    if rotary_dim % 2 != 0 or rotary_dim > q.shape[-1]:
-        raise ValueError("invalid rotary_dim")
-
-    # [B, S, R/2] -> [B, 1, S, R/2] for head broadcasting.
-    cos = cos_cache[position_ids].unsqueeze(1)
-    sin = sin_cache[position_ids].unsqueeze(1)
-
-    def rotate(x):
-        rotary = x[..., :rotary_dim]
-        tail = x[..., rotary_dim:]
-
-        # Angle arithmetic stays in FP32 even when activations are BF16/FP16.
-        even = rotary[..., 0::2].float()
-        odd = rotary[..., 1::2].float()
-        rotated = torch.stack(
-            (
-                even * cos - odd * sin,
-                even * sin + odd * cos,
-            ),
-            dim=-1,
-        ).flatten(-2)
-
-        return torch.cat((rotated.to(x.dtype), tail), dim=-1)
-
-    return rotate(q), rotate(k)
-```
-
-Use the function after Q/K projection and head reshape. Cache the returned K and the original V.
-
-### Three tests every implementation should pass
-
-**Position-zero identity**
-
-```python
-zeros = torch.zeros((batch, sequence), dtype=torch.long, device=q.device)
-q0, k0 = apply_rope(q, k, cos, sin, zeros, rotary_dim)
-torch.testing.assert_close(q0, q)
-torch.testing.assert_close(k0, k)
-```
-
-**Norm preservation**
-
-```python
-q_rot, k_rot = apply_rope(q, k, cos, sin, position_ids, rotary_dim)
-torch.testing.assert_close(
-    q_rot.float().norm(dim=-1),
-    q.float().norm(dim=-1),
-    rtol=1e-5,
-    atol=1e-5,
-)
-```
-
-Use a looser tolerance for low-precision activations.
-
-**Full-sequence versus cached decoding**
-
-Compute logits once for a complete sequence, then recompute the last-token logits by caching the prefix and rotating the final Q/K at the absolute final position. They should match within numerical tolerance.
-
-This test catches offset mistakes and accidental re-rotation better than checking shapes.
-
-## Sin/cos caches, precision, and kernels
-
-### Cache by actual position
-
-Precomputing cosine and sine avoids repeating trigonometric work. A cache is valid only for its:
-
-- frequency base;
-- rotary dimension;
-- scaling recipe;
-- maximum position;
-- device; and
-- position convention.
-
-Gather rows by `position_ids`, not merely by local tensor index.
-
-### Compute phase in FP32
-
-At long positions, BF16 or FP16 cannot represent every consecutive integer. If positions are converted to a low-precision floating type before multiplication, adjacent tokens can receive indistinguishable or inaccurate phases.
-
-Keep:
-
-- position values;
-- inverse frequencies;
-- angle multiplication; and
-- cosine/sine evaluation
-
-in FP32. Cast the resulting phase tensors or rotated output only when required by the activation path. GPT-NeoX similarly constructs rotary phase values in FP32 before conversion ([GPT-NeoX source](https://github.com/EleutherAI/gpt-neox/blob/main/megatron/model/positional_embeddings.py)).
-
-### Fusion changes cost, not semantics
-
-RoPE is elementwise and small compared with quadratic attention, but it reads and writes Q/K tensors and phase data. At high throughput, those memory operations matter.
-
-Production kernels may fuse RoPE with:
-
-- Q/K projection output handling;
-- KV-cache writes; or
-- an attention kernel's input preparation.
-
-A fused implementation must still match an eager FP32 reference at:
-
-- nonzero cache offsets;
-- partial rotary dimensions;
-- both supported pairing conventions;
-- GQA/MQA head counts; and
-- configured context scaling.
-
-An accidental transpose, materialized key-head repeat, or cache copy can cost more than the rotations themselves.
 
 ## Why ordinary RoPE does not guarantee long context
 
@@ -575,65 +360,6 @@ Extending an 8K context to 128K increases the token term by `16×`. Even when th
 
 `max_model_len` is therefore both a model-quality setting and a serving-capacity decision.
 
-## RoPE versus other position strategies
-
-| Method | Where position enters | Relative-distance behavior | Main compatibility concern |
-|---|---|---|---|
-| Learned absolute table | Position vector added to hidden states | Learned indirectly | Fixed table size and checkpoint-specific entries |
-| Transformer sinusoidal | Fixed vector added to embeddings | Can be learned from sinusoidal structure | Addition affects all later Q/K/V projections |
-| RoPE | Rotation of Q and K coordinates | Explicitly relative inside Q-K score | Pairing, rotary dimension, base, positions, scaling |
-| ALiBi | Head-specific distance bias added to logits | Explicit linear penalty by distance | Slope schedule and checkpoint training |
-
-[ALiBi](https://arxiv.org/abs/2108.12409) leaves Q, K, and V unchanged and adds a distance-dependent bias to attention logits. Its reported length extrapolation is empirical, as are the extension results for RoPE variants.
-
-No position strategy eliminates the need to evaluate:
-
-- retrieval at long distance;
-- local language quality;
-- perplexity by position;
-- passkey or needle tasks;
-- multi-document interference;
-- generation stability; and
-- serving memory and latency.
-
-## Common implementation bugs
-
-1. **Rotating V.** Standard RoPE checkpoints rotate Q and K only.
-2. **Using model hidden size in the frequency equation.** Use the configured rotary head dimension.
-3. **Assuming full-head RoPE.** Some checkpoints rotate only a prefix.
-4. **Mixing adjacent-pair and split-half layouts.**
-5. **Using a different frequency base from the checkpoint.**
-6. **Starting decode positions at zero after prefill.**
-7. **Offsetting the new Q but not the new K.**
-8. **Re-rotating cached keys on every step.**
-9. **Building phase values from local decode indices rather than absolute cache positions.**
-10. **Computing positions and trigonometry in BF16 or FP16.**
-11. **Broadcasting phase over the head axis instead of the sequence/pair axes.**
-12. **Forgetting padding or packed-document attention masks.**
-13. **Resetting packed positions without resetting attention boundaries.**
-14. **Applying a long-context scaling type to an incompatible checkpoint.**
-15. **Assuming a successful long-context forward pass proves useful long-context behavior.**
-
-## A practical review checklist
-
-When implementing or adopting RoPE, verify:
-
-1. What is the head dimension?
-2. What is the rotary dimension?
-3. Which coordinates form each pair?
-4. What base and inverse-frequency formula were used in training?
-5. Is there a released scaling configuration?
-6. Are position IDs absolute across prefill and decode?
-7. Are cached keys already rotated?
-8. Is V left unchanged?
-9. How are left padding and packed sequences handled?
-10. Are angle calculations FP32?
-11. Does the sin/cos cache include the largest absolute position?
-12. Does GQA/MQA rotate K before head sharing or repetition?
-13. Does an eager reference match the fused kernel?
-14. Do full-sequence and cached-decoding logits match?
-15. Has quality been evaluated across the full target context, not only near position zero?
-
 ## Final mental model
 
 > RoPE does not mainly attach the label “position 100” to a token. It changes how that token's query and key are oriented so attention can represent relationships such as “this key is five positions behind this query.”
@@ -730,11 +456,11 @@ Open each question to reveal an interview-ready answer.
 
 ## Sources, attribution, and diagrams
 
-This article paraphrases technical papers and implementation documentation for explanation. All four diagrams and the PyTorch reference implementation are original work by the author; no source figure, table, prose passage, or code block is reproduced.
+This article paraphrases technical papers and implementation documentation for explanation. All four diagrams are original work by the author; no source figure, table, prose passage, or code block is reproduced.
 
-The RoFormer paper is credited for the rotary formulation and relative-position derivation. Later methods are attributed to their respective papers. Open-source implementations are cited only to document production conventions such as partial rotary dimensions, split-half pairing, GQA, cache handling, and configured scaling types.
+The RoFormer paper is credited for the rotary formulation and relative-position derivation. Later methods are attributed to their respective papers. Open-source implementation documentation is cited to explain cache handling and configured scaling types.
 
-License note: a public paper or repository does not automatically grant permission to reproduce its figures or prose. Hugging Face Transformers code is Apache-2.0, and GPT-NeoX code is covered by its repository license; copying their code would require compliance with the applicable terms. This article instead provides an independently written implementation derived from the cited mathematics.
+License note: a public paper or repository does not automatically grant permission to reproduce its figures or prose. Hugging Face Transformers code is Apache-2.0; copying source code would require compliance with the applicable terms.
 
 ## References
 
@@ -743,18 +469,16 @@ License note: a public paper or repository does not automatically grant permissi
 3. **Chen, S.; Wong, S.; Chen, L.; Tian, Y.** [*Extending Context Window of Large Language Models via Positional Interpolation*](https://arxiv.org/abs/2306.15595). 2023.
 4. **Peng, B.; Quesnelle, J.; Fan, H.; Shippole, E.** [*YaRN: Efficient Context Window Extension of Large Language Models*](https://arxiv.org/abs/2309.00071). 2023.
 5. **Ding, Y.; Zhang, L. L.; Zhang, C.; Xu, Y.; Shang, N.; Xu, J.; Yang, F.; Yang, M.** [*LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens*](https://arxiv.org/abs/2402.13753). 2024.
-6. **Press, O.; Smith, N. A.; Lewis, M.** [*Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation*](https://arxiv.org/abs/2108.12409). 2021.
-7. **Sun, Y.; Dong, L.; Patra, B.; Ma, S.; Huang, S.; Benhaim, A.; Chaudhary, V.; Song, X.; Wei, F.** [*A Length-Extrapolatable Transformer*](https://arxiv.org/abs/2212.10554). 2022.
-8. **Hugging Face.** [*RoPE utilities documentation*](https://huggingface.co/docs/transformers/main/en/internal/rope_utils). Transformers documentation.
-9. **Hugging Face.** [*Qwen2 modular attention implementation*](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2/modular_qwen2.py). Transformers source.
-10. **EleutherAI.** [*GPT-NeoX rotary-position implementation*](https://github.com/EleutherAI/gpt-neox/blob/main/megatron/model/positional_embeddings.py). GPT-NeoX source.
-11. **Hugging Face.** [*Transformers license*](https://github.com/huggingface/transformers/blob/main/LICENSE).
-12. **EleutherAI.** [*GPT-NeoX license*](https://github.com/EleutherAI/gpt-neox/blob/main/LICENSE).
+6. **Sun, Y.; Dong, L.; Patra, B.; Ma, S.; Huang, S.; Benhaim, A.; Chaudhary, V.; Song, X.; Wei, F.** [*A Length-Extrapolatable Transformer*](https://arxiv.org/abs/2212.10554). 2022.
+7. **Hugging Face.** [*RoPE utilities documentation*](https://huggingface.co/docs/transformers/main/en/internal/rope_utils). Transformers documentation.
+8. **Hugging Face.** [*Qwen2 modular attention implementation*](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2/modular_qwen2.py). Transformers source.
+9. **Hugging Face.** [*Transformers license*](https://github.com/huggingface/transformers/blob/main/LICENSE).
 
 All links were accessed on July 29, 2026.
 
 ## Changelog
 
+- **2026-07-29:** Removed advanced implementation and edge-case sections for a shorter read.
 - **2026-07-29:** Removed three advanced mathematical side sections for a faster read.
 - **2026-07-29:** Added a concrete rotation example, serving configuration guide, and KV-cache capacity model.
 - **2026-07-29:** Expanded the quick knowledge check to twelve interview questions.
