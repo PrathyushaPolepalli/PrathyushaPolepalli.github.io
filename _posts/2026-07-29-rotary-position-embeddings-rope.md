@@ -368,7 +368,7 @@ Each token's query and key receive absolute rotations. Their Q-K interaction dep
 
 ## Quick knowledge check
 
-Open each question to reveal an interview-ready answer.
+Open each question to reveal the answer.
 
 <details class="knowledge-check">
   <summary>1. Why is positional encoding needed in Transformers?</summary>
