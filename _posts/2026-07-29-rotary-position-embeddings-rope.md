@@ -152,6 +152,39 @@ qₘᵀkₙ
 
 The model learns query and key features that interact with both the cosine and sine of relative displacement.
 
+### A concrete three-token example
+
+Take the sequence:
+
+```text
+I love pizza
+```
+
+| Token | Position | Query rotation | Key rotation |
+|---|---:|---:|---:|
+| `I` | 0 | `0θⱼ` | `0θⱼ` |
+| `love` | 1 | `1θⱼ` | `1θⱼ` |
+| `pizza` | 2 | `2θⱼ` | `2θⱼ` |
+
+The notation `θⱼ` matters: every coordinate pair has its own frequency.
+
+Suppose the query for `pizza` at position `m = 2` attends to the key for `love` at position `n = 1`. Under the matrix convention used here:
+
+<pre class="math-block" aria-label="Concrete one-token RoPE displacement">
+q₂ᵀk₁ = qᵀ R((1 - 2)θⱼ) k
+       = qᵀ R(-θⱼ) k
+</pre>
+
+Move the same relationship to positions `1002` and `1001`:
+
+<pre class="math-block" aria-label="Shifted RoPE positions preserve displacement">
+q₁₀₀₂ᵀk₁₀₀₁
+  = qᵀ R((1001 - 1002)θⱼ) k
+  = qᵀ R(-θⱼ) k
+</pre>
+
+The absolute phases are different, but the positional part of the score represents the same one-token displacement.
+
 ### A sign-convention note
 
 The real-matrix derivation above produces `n - m`. A complex-number derivation often displays `m - n` because the key is conjugated inside the complex inner product. These are consistent descriptions of the same real scalar under the chosen convention.
@@ -485,6 +518,8 @@ The method avoids feeding positions beyond the original numerical range, but it 
 
 There is no single universal NTK-aware formula that can be applied to every checkpoint. Hugging Face exposes a `"dynamic"` RoPE type and several parameterized variants in its [RoPE utilities documentation](https://huggingface.co/docs/transformers/main/en/internal/rope_utils). Treat the exact type and parameters as model configuration.
 
+`NTK` stands for **Neural Tangent Kernel**, but an inference engine using dynamic or NTK-aware RoPE is not running an NTK training algorithm. Operationally, the label usually refers to a family of base- or frequency-rescaling rules intended to preserve useful attention behavior over a longer range. The name does not make the formula universal; implementations and released checkpoints can differ.
+
 ### YaRN
 
 [YaRN](https://arxiv.org/abs/2309.00071) treats frequency bands differently rather than uniformly compressing every dimension. It combines interpolation and extrapolation behavior across the spectrum and includes attention calibration for efficient context extension.
@@ -503,6 +538,37 @@ Those reported lengths are experimental results, not a generic promise for any R
 
 Because it scales magnitudes as well as angles, XPos is not pure norm-preserving RoPE. It is a related positional mechanism with a different inductive bias.
 
+### RoPE types you will see in model configs
+
+Current [Hugging Face Transformers documentation](https://huggingface.co/docs/transformers/main/en/internal/rope_utils) exposes six primary `rope_type` values:
+
+| Config type | Operational meaning | Important parameters |
+|---|---|---|
+| `"default"` | Original checkpoint RoPE with no context scaling | `rope_theta`, optional partial rotary factor |
+| `"linear"` | Divide effective positions by a scale factor | `factor` |
+| `"dynamic"` | NTK-aware dynamic base/frequency rescaling | `factor`; its reference length is `max_position_embeddings` from the model configuration |
+| `"yarn"` | Frequency-band-aware scaling with attention calibration | `factor`, original context, attention and ramp parameters |
+| `"longrope"` | Short- and long-context factors that can vary by rotary pair | `factor`, `short_factor`, `long_factor`, `original_max_position_embeddings`, optional `attention_factor` |
+| `"llama3"` | Llama 3.1-style selective low/high-frequency scaling | `factor`, low/high-frequency factors, original context |
+
+These are serving configurations, not interchangeable names for the same transform. A model released with `"llama3"` scaling should not be silently served as `"linear"` because both claim the same maximum length.
+
+The current Transformers API documents a configuration shaped like:
+
+```json
+{
+  "rope_parameters": {
+    "rope_type": "linear",
+    "rope_theta": 10000.0,
+    "factor": 8.0
+  }
+}
+```
+
+Released checkpoints and other serving libraries may expose the same information under fields such as `rope_scaling`. Field names also evolve across library versions. Read the checkpoint configuration and the exact engine version rather than translating parameters from memory.
+
+Some architectures use different RoPE settings for different layer types, such as full-attention and sliding-window layers. In that case, one model can legitimately contain more than one RoPE configuration.
+
 ### The scaling recipe is part of the checkpoint
 
 A deployable model should specify:
@@ -517,6 +583,29 @@ A deployable model should specify:
 - whether additional training or fine-tuning was performed.
 
 Changing only the inference server configuration can produce a model that executes successfully but no longer matches the position distribution used during training.
+
+### A longer position range is not free serving capacity
+
+RoPE scaling changes positional geometry. It does not remove the memory and compute cost of storing and attending to more tokens.
+
+For one sequence, a useful first-order KV-cache estimate is:
+
+<pre class="math-block" aria-label="KV-cache memory estimate">
+KV bytes
+  ≈ 2 × layers × cached tokens × KV heads
+    × head dimension × bytes per element
+</pre>
+
+The leading `2` represents keys and values. Grouped-query or multi-query attention reduces `KV heads`, while quantization, paging, offload, and allocator overhead modify the practical result.
+
+Extending an 8K context to 128K increases the token term by `16×`. Even when the model's RoPE configuration supports that range:
+
+- KV-cache capacity per request grows approximately linearly with cached tokens;
+- decode must read a larger cache for each new token unless the architecture limits attention;
+- prefill processes a much longer prompt; and
+- concurrency and token throughput can fall.
+
+`max_model_len` is therefore both a model-quality setting and a serving-capacity decision.
 
 ## RoPE versus other position strategies
 
@@ -576,6 +665,12 @@ When implementing or adopting RoPE, verify:
 13. Does an eager reference match the fused kernel?
 14. Do full-sequence and cached-decoding logits match?
 15. Has quality been evaluated across the full target context, not only near position zero?
+
+## Final mental model
+
+> RoPE does not mainly attach the label “position 100” to a token. It changes how that token's query and key are oriented so attention can represent relationships such as “this key is five positions behind this query.”
+
+Each token's query and key receive absolute rotations. Their Q-K interaction depends on relative displacement.
 
 ## Quick knowledge check
 
@@ -692,6 +787,7 @@ All links were accessed on July 29, 2026.
 
 ## Changelog
 
+- **2026-07-29:** Added a concrete rotation example, serving configuration guide, and KV-cache capacity model.
 - **2026-07-29:** Expanded the quick knowledge check to twelve interview questions.
 - **2026-07-29:** Added a ten-question quick knowledge check.
 - **2026-07-29:** Initial publication.
