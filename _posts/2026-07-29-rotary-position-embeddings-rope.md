@@ -584,28 +584,28 @@ Open each question to reveal the answer.
 <details class="knowledge-check">
   <summary>1. Why is positional encoding needed in Transformers?</summary>
   <div class="knowledge-check__answer">
-    <p>Content-only self-attention is permutation equivariant: reordering the input reorders the output without giving the model a rich representation of order or distance. Positional encoding lets attention distinguish where tokens occur. A causal mask limits visibility, but it does not replace that position signal.</p>
+    <p>Self-attention computes similarity between query and key vectors but has no inherent representation of sequence order. Without positional encoding, sentences containing the same words in different orders, such as “Dog bites man” and “Man bites dog,” would not provide the model with enough information to distinguish their ordering. Positional encoding injects token-position information so the model can understand word order and learn relationships based on where tokens occur in the sequence.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
   <summary>2. Why does RoPE rotate only Q and K, not V?</summary>
   <div class="knowledge-check__answer">
-    <p>Q and K determine the attention score: which token should attend to which other token. Rotating them makes that compatibility score position-aware. V carries the content selected by those weights, so standard RoPE leaves it unchanged. Rotating V would change the transported content and would not match a standard RoPE checkpoint.</p>
+    <p>RoPE is applied to Q and K because positional information is needed when computing attention scores. The score is based on <code>QK<sup>T</sup></code>, so rotating Q and K makes their similarity depend on relative position. V contains the semantic information aggregated after the attention weights are computed, so rotating it would unnecessarily alter the content passed forward and would not match a standard RoPE checkpoint.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
   <summary>3. Why does RoPE naturally encode relative rather than absolute positions?</summary>
   <div class="knowledge-check__answer">
-    <p>Each query and key receives an absolute phase, but their dot product combines the rotations as <code>R(m)^T R(n) = R(n - m)</code>. The positional factor in the attention score therefore depends on the displacement between the tokens.</p>
+    <p>Each token's query and key are rotated according to its absolute position. When the attention score <code>QK<sup>T</sup></code> is computed, the rotation matrices combine as <code>R(m)<sup>T</sup>R(n) = R(n - m)</code>. The absolute rotations therefore reduce to the difference between the positions. Tokens one position apart have the same positional relationship whether they occur at positions 10–11 or 1000–1001.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
   <summary>4. Why does RoPE extrapolate to longer contexts better than learned position embeddings?</summary>
   <div class="knowledge-check__answer">
-    <p>RoPE has no fixed position table that ends at a configured index. Its rotation formula can generate phases for any position, and its query-key geometry is based on relative displacement. That gives it a structural advantage over a learned finite table, but it does not guarantee reliable extrapolation: the model was still trained on a limited range of positions and distances.</p>
+    <p>Learned positional embeddings are limited to positions represented in their trained embedding table. RoPE computes position information using deterministic rotations, so it can generate phases for unseen positions. Combined with its relative-position property and frequency-based encoding, this makes RoPE structurally better suited to long-context extrapolation, especially with scaling methods such as NTK-aware scaling or YaRN. It is still not a guarantee: model weights were trained on a finite range, so quality beyond that range must be evaluated.</p>
   </div>
 </details>
 
