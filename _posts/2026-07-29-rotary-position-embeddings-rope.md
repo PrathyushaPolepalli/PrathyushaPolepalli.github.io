@@ -619,7 +619,7 @@ Open each question to reveal the answer.
 <details class="knowledge-check">
   <summary>6. How does RoPE interact with the KV cache during autoregressive decoding?</summary>
   <div class="knowledge-check__answer">
-    <p>During prefill, each key is rotated at its absolute position and stored with the ordinary value. During decoding, the new query and key are rotated at the current absolute <code>cache_position</code>. Existing cached keys are already rotated and must not be rotated again.</p>
+    <p>During prefill, each token's query, key, and value are computed, and RoPE is applied to the query and key at their absolute positions. Only the rotated keys and the values are stored in the KV cache; queries are used for the current attention calculation and then discarded because they are not reused. During decoding, the new token's query, key, and value are computed, and RoPE is applied to the new query and key at the current absolute <code>cache_position</code>. The new query attends to all previously cached keys plus the current key. Because cached keys are already rotated with their original positions, they do not need to be rotated or recomputed.</p>
   </div>
 </details>
 
