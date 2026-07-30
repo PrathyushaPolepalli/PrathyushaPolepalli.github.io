@@ -579,75 +579,89 @@ When implementing or adopting RoPE, verify:
 
 ## Quick knowledge check
 
-Open each question to reveal the answer.
+Open each question to reveal an interview-ready answer.
 
 <details class="knowledge-check">
   <summary>1. Why is positional encoding needed in Transformers?</summary>
   <div class="knowledge-check__answer">
-    <p>Self-attention computes similarity between query and key vectors but has no inherent representation of sequence order. Without positional encoding, sentences containing the same words in different orders, such as “Dog bites man” and “Man bites dog,” would not provide the model with enough information to distinguish their ordering. Positional encoding injects token-position information so the model can understand word order and learn relationships based on where tokens occur in the sequence.</p>
+    <p>Content-only self-attention has no inherent understanding of token order: reordering the inputs simply reorders the outputs. Without positional information, sequences containing the same tokens in different orders, such as “Dog bites man” and “Man bites dog,” provide no explicit signal that their structure is different. Positional encoding injects token-position information so the model can learn word order, token relationships, and sequence structure.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>2. Why does RoPE rotate only Q and K, not V?</summary>
+  <summary>2. Why does RoPE rotate only Query (Q) and Key (K), but not Value (V)?</summary>
   <div class="knowledge-check__answer">
-    <p>RoPE is applied to Q and K because positional information is needed when computing attention scores. The score is based on <code>QK<sup>T</sup></code>, so rotating Q and K makes their similarity depend on relative position. V contains the semantic information aggregated after the attention weights are computed, so rotating it would unnecessarily alter the content passed forward and would not match a standard RoPE checkpoint.</p>
+    <p>Standard RoPE is applied to Q and K because position needs to influence the attention score, which is based on <code>QK<sup>T</sup></code>. Rotating Q and K makes that score position-aware by incorporating relative distance. V contains the semantic information aggregated after attention weights are computed, so rotating it would alter the content passed forward without being necessary for RoPE's relative-score property.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>3. Why does RoPE naturally encode relative rather than absolute positions?</summary>
+  <summary>3. If RoPE rotates Q and K using absolute positions, why does it encode relative positions?</summary>
   <div class="knowledge-check__answer">
-    <p>Each token's query and key are rotated according to its absolute position. When the attention score <code>QK<sup>T</sup></code> is computed, the rotation matrices combine as <code>R(m)<sup>T</sup>R(n) = R(n - m)</code>. The absolute rotations therefore reduce to the difference between the positions. Tokens one position apart have the same positional relationship whether they occur at positions 10–11 or 1000–1001.</p>
+    <p>RoPE rotates each query and key according to its absolute position. When a query at position <code>m</code> is compared with a key at position <code>n</code>, the rotation matrices combine as <code>R(m)<sup>T</sup>R(n) = R(n - m)</code>. The attention score therefore depends on the difference between the positions rather than on either absolute position alone. An alternate rotation convention may write the sign as <code>m - n</code>; the relative-distance property is the same.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>4. Why does RoPE extrapolate to longer contexts better than learned position embeddings?</summary>
+  <summary>4. Why is RoPE better than learned positional embeddings for long-context inference?</summary>
   <div class="knowledge-check__answer">
-    <p>Learned positional embeddings are limited to positions represented in their trained embedding table. RoPE computes position information using deterministic rotations, so it can generate phases for unseen positions. Combined with its relative-position property and frequency-based encoding, this makes RoPE structurally better suited to long-context extrapolation, especially with scaling methods such as NTK-aware scaling or YaRN. It is still not a guarantee: model weights were trained on a finite range, so quality beyond that range must be evaluated.</p>
+    <p>Learned positional embeddings store a separate vector for each trained position. A model trained with an 8K table does not naturally have learned entries for positions near 128K. RoPE computes position information with deterministic rotations, so it can generate phases for unseen positions. Its relative-position property and multi-frequency design make it structurally better suited to extrapolation, but they do not guarantee quality beyond training; long contexts still require scaling, adaptation, and evaluation.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>5. Why are different frequency rotations used across embedding dimensions?</summary>
+  <summary>5. How does RoPE interact with the KV cache during autoregressive decoding?</summary>
   <div class="knowledge-check__answer">
-    <p>Different frequencies provide position features at different scales. Fast pairs change substantially across nearby tokens, while slow pairs retain phase over longer distances. Combining them is more expressive than relying on one periodic signal.</p>
+    <p>During prefill, the model computes Q, K, and V for all input tokens. RoPE is applied to Q and K, and only the rotated keys and values are stored in the KV cache. Queries are discarded after the current attention computation because they are not reused. During decoding, the new token's Q, K, and V are computed, RoPE is applied to the new Q and K at the absolute cache position, and the new query attends to the cached keys plus the current key. The old keys are already rotated at their original positions and do not need to be recomputed.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>6. How does RoPE interact with the KV cache during autoregressive decoding?</summary>
+  <summary>6. What happens if RoPE is completely disabled?</summary>
   <div class="knowledge-check__answer">
-    <p>During prefill, each token's query, key, and value are computed, and RoPE is applied to the query and key at their absolute positions. Only the rotated keys and the values are stored in the KV cache; queries are used for the current attention calculation and then discarded because they are not reused. During decoding, the new token's query, key, and value are computed, and RoPE is applied to the new query and key at the current absolute <code>cache_position</code>. The new query attends to all previously cached keys plus the current key. Because cached keys are already rotated with their original positions, they do not need to be rotated or recomputed.</p>
+    <p>Without RoPE or another position mechanism, content-only self-attention lacks an explicit representation of token order and relative distance. The model would struggle with word order, syntax, and relationships between nearby and distant tokens. Disabling RoPE in a checkpoint trained with it is even more damaging because the learned Q/K projections expect the rotary geometry and would receive incompatible attention scores.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>7. What problem do techniques like NTK scaling or YaRN solve?</summary>
+  <summary>7. Why do people call RoPE a relative positional encoding even though it uses absolute positions?</summary>
   <div class="knowledge-check__answer">
-    <p>They adapt RoPE's position-to-frequency mapping when extending a model beyond its training context. The goal is to reduce harmful out-of-distribution phase behavior while preserving useful local and long-range structure. Their formulas and parameters are checkpoint-specific and still require quality evaluation.</p>
+    <p>RoPE uses absolute positions to choose the rotation applied to each query and key. After the attention dot product combines those rotations, the positional factor depends only on the difference between the token positions. Because the interaction captures relative displacement rather than either absolute index alone, RoPE is commonly described as a relative positional encoding.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>8. What does norm preservation mean in RoPE?</summary>
+  <summary>8. Why does RoPE use different rotation frequencies across dimensions?</summary>
   <div class="knowledge-check__answer">
-    <p>A pure rotation changes a vector's direction but not its Euclidean length. In exact arithmetic, <code>||R(p)x|| = ||x||</code>. RoPE changes phase without directly changing query or key magnitude.</p>
+    <p>Language contains relationships at several distance scales. Fast-changing frequency pairs provide fine-grained phase differences for nearby tokens, while slow-changing pairs retain useful variation across longer spans. The combined frequency bank lets the model learn both local syntax and long-range dependencies within the same attention head.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>9. Why can a RoPE pairing-layout mismatch break a checkpoint?</summary>
+  <summary>9. Why does extending context length with RoPE sometimes fail even though RoPE can generate arbitrary positions?</summary>
   <div class="knowledge-check__answer">
-    <p>Adjacent-pair and split-half layouts rotate different coordinate pairs. The trained Q/K projection weights learned features in one of those bases, so changing the helper pairs unrelated learned coordinates unless the weights are converted consistently.</p>
+    <p>The rotation formula can produce phases for any position, but every frequency is periodic and the model was trained on only a finite distribution of positions and relative distances. At long contexts, individual frequency bands can produce repeated or poorly calibrated phase patterns, and the model encounters relationships outside its training distribution. NTK-aware scaling, YaRN, and LongRoPE modify the position-frequency mapping to preserve more useful behavior over a larger range.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>10. Why should RoPE phase calculations stay in FP32?</summary>
+  <summary>10. Why not rotate the old Keys in the KV cache again during decoding?</summary>
   <div class="knowledge-check__answer">
-    <p>At large positions, BF16 and FP16 cannot represent every consecutive integer accurately. Low-precision position multiplication and trigonometry can therefore give nearby tokens inaccurate or indistinguishable phases. The final phase tensors or rotated outputs can be cast afterward when required.</p>
+    <p>Cached keys were already rotated according to their original token positions during prefill or an earlier decoding step. Applying RoPE again would rotate them a second time and corrupt their positional representation. Only the new query and new key need the rotation for the current absolute position.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>11. Why does RoPE help models understand that nearby tokens are related?</summary>
+  <div class="knowledge-check__answer">
+    <p>RoPE expresses token distance through the phase difference between rotated queries and keys. Nearby positions create small phase differences in the slower and medium-frequency bands, while the complete frequency bank gives the model several signals from which to learn distance-sensitive patterns. This supports local syntax and longer-range relationships, although attention is not forced to decay monotonically with distance.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>12. What is the main intuition behind RoPE?</summary>
+  <div class="knowledge-check__answer">
+    <p>RoPE converts position into rotations of query and key vectors. Instead of adding a separate position embedding, it changes the geometry of attention so that token similarity depends on relative position. This gives the model an efficient way to represent order, distance, and relationships across the sequence.</p>
   </div>
 </details>
 
@@ -678,5 +692,6 @@ All links were accessed on July 29, 2026.
 
 ## Changelog
 
+- **2026-07-29:** Expanded the quick knowledge check to twelve interview questions.
 - **2026-07-29:** Added a ten-question quick knowledge check.
 - **2026-07-29:** Initial publication.
