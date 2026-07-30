@@ -96,32 +96,6 @@ R(pθ)x = [
 
 The token position controls phase. The content vector controls the radius and starting direction.
 
-### The complex-number view
-
-Identify the same pair with a complex number:
-
-<pre class="math-block" aria-label="Complex-number representation of RoPE">
-z = x₀ + i x₁
-
-RoPE(z, p) = z eⁱᵖᶿ
-</pre>
-
-Multiplication by a unit complex number is a rotation. This notation makes the name “rotary” literal and gives a compact way to reason about phase differences.
-
-### Rotation preserves norm
-
-The rotation matrix is orthogonal:
-
-<pre class="math-block" aria-label="RoPE norm preservation">
-R(pθ)ᵀ R(pθ) = I
-
-‖R(pθ)x‖₂ = ‖x‖₂
-</pre>
-
-Pure RoPE therefore changes direction but not vector magnitude in exact arithmetic. If a model rotates only a prefix of each head and copies the remaining coordinates unchanged, the full vector norm is still preserved.
-
-Low-precision arithmetic introduces small numerical error, but that is an implementation effect rather than a property of the mathematical transform.
-
 ## Why the attention score depends on relative position
 
 Let an unrotated query content vector be `q` and an unrotated key content vector be `k`. Rotate the query at position `m` and the key at position `n`:
@@ -184,12 +158,6 @@ q₁₀₀₂ᵀk₁₀₀₁
 </pre>
 
 The absolute phases are different, but the positional part of the score represents the same one-token displacement.
-
-### A sign-convention note
-
-The real-matrix derivation above produces `n - m`. A complex-number derivation often displays `m - n` because the key is conjugated inside the complex inner product. These are consistent descriptions of the same real scalar under the chosen convention.
-
-The important invariant is not the written sign. It is that the position factor depends only on relative displacement.
 
 ### What “relative” does not mean
 
@@ -787,6 +755,7 @@ All links were accessed on July 29, 2026.
 
 ## Changelog
 
+- **2026-07-29:** Removed three advanced mathematical side sections for a faster read.
 - **2026-07-29:** Added a concrete rotation example, serving configuration guide, and KV-cache capacity model.
 - **2026-07-29:** Expanded the quick knowledge check to twelve interview questions.
 - **2026-07-29:** Added a ten-question quick knowledge check.
