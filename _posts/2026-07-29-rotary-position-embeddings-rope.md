@@ -582,72 +582,72 @@ When implementing or adopting RoPE, verify:
 Open each question to reveal the answer.
 
 <details class="knowledge-check">
-  <summary>1. Which attention tensors does standard RoPE rotate?</summary>
+  <summary>1. Why is positional encoding needed in Transformers?</summary>
   <div class="knowledge-check__answer">
-    <p>RoPE rotates queries and keys after projection and head reshaping. Standard RoPE leaves values unchanged.</p>
+    <p>Content-only self-attention is permutation equivariant: reordering the input reorders the output without giving the model a rich representation of order or distance. Positional encoding lets attention distinguish where tokens occur. A causal mask limits visibility, but it does not replace that position signal.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>2. Why does a RoPE query-key score depend on relative position?</summary>
+  <summary>2. Why does RoPE rotate only Q and K, not V?</summary>
   <div class="knowledge-check__answer">
-    <p>Because <code>R(m)^T R(n) = R(n - m)</code>. The query rotation at position <code>m</code> and key rotation at position <code>n</code> combine into one rotation determined by their displacement.</p>
+    <p>Q and K determine the attention score: which token should attend to which other token. Rotating them makes that compatibility score position-aware. V carries the content selected by those weights, so standard RoPE leaves it unchanged. Rotating V would change the transported content and would not match a standard RoPE checkpoint.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>3. What does norm preservation mean in RoPE?</summary>
+  <summary>3. Why does RoPE naturally encode relative rather than absolute positions?</summary>
   <div class="knowledge-check__answer">
-    <p>A pure rotation changes a vector's direction but not its Euclidean length. In exact arithmetic, <code>||R(p)x|| = ||x||</code>.</p>
+    <p>Each query and key receives an absolute phase, but their dot product combines the rotations as <code>R(m)^T R(n) = R(n - m)</code>. The positional factor in the attention score therefore depends on the displacement between the tokens.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>4. Why does RoPE use several angular frequencies?</summary>
+  <summary>4. Why does RoPE extrapolate to longer contexts better than learned position embeddings?</summary>
   <div class="knowledge-check__answer">
-    <p>Fast-rotating coordinate pairs represent short-range phase changes, while slow pairs vary over longer distances. Attention can combine the full frequency bank to reason about offsets at several scales.</p>
+    <p>RoPE has no fixed position table that ends at a configured index. Its rotation formula can generate phases for any position, and its query-key geometry is based on relative displacement. That gives it a structural advantage over a learned finite table, but it does not guarantee reliable extrapolation: the model was still trained on a limited range of positions and distances.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>5. Can adjacent-pair and split-half RoPE implementations be swapped for the same checkpoint?</summary>
+  <summary>5. Why are different frequency rotations used across embedding dimensions?</summary>
   <div class="knowledge-check__answer">
-    <p>No. Both layouts are mathematically valid, but they pair different learned Q/K coordinates. A trained checkpoint must use its original layout unless the relevant weights are converted consistently.</p>
+    <p>Different frequencies provide position features at different scales. Fast pairs change substantially across nearby tokens, while slow pairs retain phase over longer distances. Combining them is more expressive than relying on one periodic signal.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>6. How should positions work when decoding with a KV cache?</summary>
+  <summary>6. How does RoPE interact with the KV cache during autoregressive decoding?</summary>
   <div class="knowledge-check__answer">
-    <p>New queries and keys use their absolute cache positions. Cached keys are already rotated and must not be rotated again. For a simple append-only cache, new positions continue from the number of previously seen tokens.</p>
+    <p>During prefill, each key is rotated at its absolute position and stored with the ordinary value. During decoding, the new query and key are rotated at the current absolute <code>cache_position</code>. Existing cached keys are already rotated and must not be rotated again.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>7. Why should phase calculations stay in FP32?</summary>
+  <summary>7. What problem do techniques like NTK scaling or YaRN solve?</summary>
   <div class="knowledge-check__answer">
-    <p>At large positions, BF16 and FP16 cannot represent every consecutive integer accurately. Low-precision position multiplication and trigonometry can therefore give nearby tokens inaccurate or indistinguishable phases.</p>
+    <p>They adapt RoPE's position-to-frequency mapping when extending a model beyond its training context. The goal is to reduce harmful out-of-distribution phase behavior while preserving useful local and long-range structure. Their formulas and parameters are checkpoint-specific and still require quality evaluation.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>8. Does the RoPE formula guarantee useful inference beyond the training context?</summary>
+  <summary>8. What does norm preservation mean in RoPE?</summary>
   <div class="knowledge-check__answer">
-    <p>No. The formula produces angles for any position, but model weights are trained on a finite distribution of positions and offsets. Long-context quality must be adapted and evaluated.</p>
+    <p>A pure rotation changes a vector's direction but not its Euclidean length. In exact arithmetic, <code>||R(p)x|| = ||x||</code>. RoPE changes phase without directly changing query or key magnitude.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>9. What trade-off does Position Interpolation make?</summary>
+  <summary>9. Why can a RoPE pairing-layout mismatch break a checkpoint?</summary>
   <div class="knowledge-check__answer">
-    <p>It maps a longer target context back into the pretrained position range, avoiding direct extrapolation but compressing phase differences between neighboring tokens. The published method uses additional fine-tuning.</p>
+    <p>Adjacent-pair and split-half layouts rotate different coordinate pairs. The trained Q/K projection weights learned features in one of those bases, so changing the helper pairs unrelated learned coordinates unless the weights are converted consistently.</p>
   </div>
 </details>
 
 <details class="knowledge-check">
-  <summary>10. How is ALiBi different from RoPE?</summary>
+  <summary>10. Why should RoPE phase calculations stay in FP32?</summary>
   <div class="knowledge-check__answer">
-    <p>RoPE rotates query and key coordinates before their dot product. ALiBi leaves Q, K, and V unchanged and adds a head-specific distance bias directly to attention logits.</p>
+    <p>At large positions, BF16 and FP16 cannot represent every consecutive integer accurately. Low-precision position multiplication and trigonometry can therefore give nearby tokens inaccurate or indistinguishable phases. The final phase tensors or rotated outputs can be cast afterward when required.</p>
   </div>
 </details>
 
