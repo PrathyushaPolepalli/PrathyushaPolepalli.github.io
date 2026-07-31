@@ -23,7 +23,107 @@ MFU:                18%
 
 Is the GPU fully utilized, 42% utilized, 21% utilized, or 18% utilized?
 
-All four numbers can be correct because they measure different things:
+All four numbers can be correct. To understand why, we first need the execution hierarchy that connects a model operation to the GPU hardware.
+
+## First: threads, warps, blocks, grids, and SMs
+
+When a framework launches a CUDA **kernel**, it does not send one indivisible task to the whole GPU. It launches a grid of thread blocks, and the GPU distributes those blocks across its Streaming Multiprocessors.
+
+```text
+Kernel launch
+└── Grid
+    ├── Thread block 0 ── assigned to one SM
+    │   ├── Warp 0: threads 0–31
+    │   ├── Warp 1: threads 32–63
+    │   └── ...
+    ├── Thread block 1 ── assigned to one SM
+    └── ...
+
+GPU
+├── SM 0: resident blocks → warp schedulers → execution pipelines
+├── SM 1: resident blocks → warp schedulers → execution pipelines
+└── ...
+```
+
+The [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html) defines this programming and execution model.
+
+### Thread
+
+A **thread** is one logical execution instance of a kernel. Threads have their own registers and indices, which let different threads process different elements of a tensor.
+
+A thread is not independently scheduled like a CPU process. NVIDIA GPUs group threads into warps for instruction scheduling.
+
+### Warp
+
+A **warp** is a group of 32 CUDA threads. The SM's warp schedulers select eligible warps and issue their instructions to execution pipelines.
+
+Threads in a warp follow the SIMT model: they execute the same instruction over different data lanes. If threads take different branch paths, the warp must execute the required paths with only the relevant lanes active, which can reduce efficiency.
+
+This is why performance counters often discuss:
+
+- **resident warps**, which currently occupy SM resources;
+- **eligible warps**, which are ready to issue; and
+- **issuing warps**, which actually issue an instruction.
+
+### Thread block
+
+A **thread block**, also called a Cooperative Thread Array or CTA, is a group of threads that can cooperate through shared memory and block-level synchronization.
+
+The GPU assigns an entire block to one SM. The block remains on that SM for its lifetime; it is not split across SMs. An SM can host multiple blocks concurrently when registers, shared memory, warp slots, and architectural limits allow it.
+
+Those resource limits determine how many blocks and warps can be resident, which is why block size, register use, and shared-memory use affect occupancy.
+
+### Grid and kernel
+
+A **kernel** is a GPU function executed in parallel by many threads. A kernel launch specifies the number and arrangement of blocks in the grid and the threads in each block.
+
+A **grid** is the complete collection of blocks created by one kernel launch. The grid size determines how much parallel work is available to distribute across the GPU.
+
+If a GPU has many SMs but a kernel launches only a few blocks, only a few SMs may receive work. The device can still show high GPU-Util because a kernel is continuously running, while SM Active remains low because much of the GPU has no assigned warp.
+
+### Streaming Multiprocessor
+
+A **Streaming Multiprocessor**, or **SM**, is the GPU's primary programmable execution unit. A simplified SM contains:
+
+```text
+Streaming Multiprocessor
+├── Warp schedulers and dispatch units
+├── Registers
+├── Shared memory and L1 cache
+├── CUDA-core arithmetic pipelines
+├── Tensor Core pipelines
+├── Load/store units
+└── Other specialized pipelines
+```
+
+CUDA cores are arithmetic lanes inside an SM, not independently scheduled CPU-like cores. Tensor Cores are specialized matrix-math pipelines inside the SM. Warp instructions flow through the SM's schedulers to the appropriate pipelines.
+
+An SM can therefore be **active** because it has an assigned warp without every arithmetic pipeline being busy. The warp may be waiting for memory, executing a non-Tensor instruction, stalled at a dependency, or using only part of the SM's available throughput.
+
+### The mapping that matters for utilization
+
+The relationship is:
+
+```text
+Kernel → grid → blocks → warps → threads
+                   ↓
+            blocks reside on SMs
+                   ↓
+          warp instructions use SM pipelines
+```
+
+This mapping explains several otherwise confusing observations:
+
+- A small grid can produce high GPU-Util but low SM Active.
+- Many resident warps can produce high occupancy but still stall.
+- High SM Active does not prove Tensor Core activity.
+- High Tensor-pipe activity does not prove high end-to-end model throughput.
+
+## From the execution hierarchy to utilization metrics
+
+Large matrix multiplications use Tensor Cores when the data type, layout, dimensions, and kernel support them. The same transformer block also runs softmax, normalization, activation, indexing, reduction, memory, and communication work that does not map entirely to Tensor Cores.
+
+With the execution hierarchy established:
 
 - **GPU-Util** asks whether any kernel was executing.
 - **SM Active** asks whether an SM had at least one warp assigned.
@@ -48,26 +148,7 @@ The word *utilization* hides the denominator. If the denominator changes, the pe
 7. **The same time window matters.** A one-second NVML sample, a per-kernel Nsight report, and a five-minute job-level MFU cannot be compared as if they described one interval.
 8. **Inference decode is often memory-bound.** Low Tensor Core activity or MFU can be expected even when token latency is excellent.
 
-## Start with the GPU hierarchy
-
-A simplified NVIDIA GPU looks like:
-
-```text
-GPU
-├── Streaming Multiprocessor 0
-│   ├── Warp schedulers
-│   ├── CUDA cores and other execution pipelines
-│   ├── Tensor Core pipelines
-│   ├── Load/store units
-│   ├── Registers
-│   └── Shared memory
-├── Streaming Multiprocessor 1
-└── ...
-```
-
-Large matrix multiplications use Tensor Cores when the data type, layout, dimensions, and kernel support them. The same transformer block also runs softmax, normalization, activation, indexing, reduction, memory, and communication work that does not map entirely to Tensor Cores.
-
-That gives us several levels of observation:
+The metrics now map to distinct levels:
 
 | Metric | Typical source | Core question |
 |---|---|---|
@@ -615,18 +696,20 @@ Metric names and availability vary across GPU architectures, drivers, DCGM relea
 
 ## References
 
-1. **NVIDIA.** [*NVML API Reference*](https://docs.nvidia.com/deploy/nvml-api/), especially `nvmlUtilization_t`.
-2. **NVIDIA.** [*NVIDIA System Management Interface (`nvidia-smi`) Documentation*](https://docs.nvidia.com/deploy/nvidia-smi/index.html).
-3. **NVIDIA.** [*Data Center GPU Manager field definitions*](https://github.com/NVIDIA/DCGM/blob/72fa3feaa67d716a75323a8f47c34ff3ee73f824/dcgmlib/dcgm_fields.h), profiling fields 1001–1005.
-4. **NVIDIA.** [*Nsight Compute Profiling Guide*](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html).
-5. **NVIDIA.** [*Matrix Multiplication Background User's Guide*](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html).
-6. **Chowdhery, A.; et al.** [*PaLM: Scaling Language Modeling with Pathways*](https://arxiv.org/abs/2204.02311). 2022.
-7. **Narayanan, D.; et al.** [*Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM*](https://arxiv.org/abs/2104.04473). 2021.
-8. **NVIDIA.** [*Transformer Engine FP8 Primer*](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html).
+1. **NVIDIA.** [*CUDA C++ Programming Guide*](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html).
+2. **NVIDIA.** [*NVML API Reference*](https://docs.nvidia.com/deploy/nvml-api/), especially `nvmlUtilization_t`.
+3. **NVIDIA.** [*NVIDIA System Management Interface (`nvidia-smi`) Documentation*](https://docs.nvidia.com/deploy/nvidia-smi/index.html).
+4. **NVIDIA.** [*Data Center GPU Manager field definitions*](https://github.com/NVIDIA/DCGM/blob/72fa3feaa67d716a75323a8f47c34ff3ee73f824/dcgmlib/dcgm_fields.h), profiling fields 1001–1005.
+5. **NVIDIA.** [*Nsight Compute Profiling Guide*](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html).
+6. **NVIDIA.** [*Matrix Multiplication Background User's Guide*](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html).
+7. **Chowdhery, A.; et al.** [*PaLM: Scaling Language Modeling with Pathways*](https://arxiv.org/abs/2204.02311). 2022.
+8. **Narayanan, D.; et al.** [*Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM*](https://arxiv.org/abs/2104.04473). 2021.
+9. **NVIDIA.** [*Transformer Engine FP8 Primer*](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html).
 
 All links were accessed on July 30, 2026.
 
 ## Changelog
 
+- **2026-07-30:** Moved the CUDA execution hierarchy before the utilization metrics and added definitions for threads, warps, blocks, grids, kernels, and SMs.
 - **2026-07-30:** Added a final mental model and 12 expandable knowledge checks.
 - **2026-07-30:** Initial publication.
