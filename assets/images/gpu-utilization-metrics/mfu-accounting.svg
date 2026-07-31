@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" role="img">
+  <title>MFU and HFU accounting</title>
+  <desc>Useful model work forms the MFU numerator. Extra recomputation increases hardware-executed work for HFU. Both are compared with aggregate peak work over the same wall time.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fffdf8; }
+      .box { stroke-width: 2; }
+      .useful { fill: #dce9df; stroke: #44735a; }
+      .extra { fill: #f7dfd8; stroke: #b6432f; }
+      .peak { fill: #e6edf1; stroke: #315f7d; }
+      .result { fill: #eee6f2; stroke: #6e4f7d; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 700 18px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .formula { font: 700 16px ui-monospace, Menlo, monospace; fill: #20211f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="680"/>
+  <text class="title" x="55" y="48">MFU counts useful progress; HFU can also count executed rework</text>
+
+  <rect class="box useful" x="65" y="115" width="300" height="145" rx="18"/>
+  <text class="label" x="215" y="160" text-anchor="middle">Useful model FLOPs</text>
+  <text class="small" x="215" y="195" text-anchor="middle">Forward/backward algorithmic work</text>
+  <text class="formula" x="215" y="225" text-anchor="middle">8 PFLOP</text>
+
+  <rect class="box extra" x="65" y="315" width="300" height="145" rx="18"/>
+  <text class="label" x="215" y="360" text-anchor="middle">Extra executed FLOPs</text>
+  <text class="small" x="215" y="395" text-anchor="middle">Example: activation recomputation</text>
+  <text class="formula" x="215" y="425" text-anchor="middle">2 PFLOP</text>
+
+  <rect class="box peak" x="455" y="210" width="300" height="165" rx="18"/>
+  <text class="label" x="605" y="255" text-anchor="middle">Aggregate peak work</text>
+  <text class="small" x="605" y="290" text-anchor="middle">wall time × sum of selected peaks</text>
+  <text class="formula" x="605" y="325" text-anchor="middle">2 s × 8 × 1 PFLOP/s</text>
+  <text class="formula" x="605" y="350" text-anchor="middle">= 16 PFLOP</text>
+
+  <rect class="box result" x="845" y="115" width="290" height="145" rx="18"/>
+  <text class="label" x="990" y="160" text-anchor="middle">MFU</text>
+  <text class="formula" x="990" y="200" text-anchor="middle">8 / 16 = 50%</text>
+  <text class="small" x="990" y="230" text-anchor="middle">useful model work only</text>
+
+  <rect class="box result" x="845" y="315" width="290" height="145" rx="18"/>
+  <text class="label" x="990" y="360" text-anchor="middle">HFU</text>
+  <text class="formula" x="990" y="400" text-anchor="middle">(8 + 2) / 16 = 62.5%</text>
+  <text class="small" x="990" y="430" text-anchor="middle">includes the executed rework</text>
+
+  <text class="small" x="600" y="545" text-anchor="middle">A higher HFU caused only by recomputation does not mean more tokens or examples finished.</text>
+  <text class="small" x="600" y="585" text-anchor="middle">Both ratios require the same wall time and the same precision-appropriate peak denominator.</text>
+</svg>

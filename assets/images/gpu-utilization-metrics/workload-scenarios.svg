@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img">
+  <title>Qualitative GPU metric patterns for four AI workloads</title>
+  <desc>Four workload cards show qualitative levels for GPU-Util, SM Active, Tensor activity, device-memory demand, and MFU for efficient GEMM training, memory-bound decode, NCCL communication, and input-pipeline gaps.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fffdf8; }
+      .card { fill: #f4efe6; stroke: #d8d0c3; stroke-width: 2; }
+      .track { fill: #ded7cc; }
+      .high { fill: #44735a; }
+      .medium { fill: #b88624; }
+      .low { fill: #b6432f; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .card-title { font: 700 18px Inter, Arial, sans-serif; fill: #20211f; }
+      .label { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .value { font: 700 13px Inter, Arial, sans-serif; fill: #20211f; }
+      .note { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="800"/>
+  <text class="title" x="55" y="48">The same GPU can produce very different metric combinations</text>
+
+  <rect class="card" x="45" y="85" width="540" height="300" rx="20"/>
+  <rect class="card" x="615" y="85" width="540" height="300" rx="20"/>
+  <rect class="card" x="45" y="420" width="540" height="300" rx="20"/>
+  <rect class="card" x="615" y="420" width="540" height="300" rx="20"/>
+
+  <text class="card-title" x="75" y="125">Large BF16 training GEMMs</text>
+  <text class="card-title" x="645" y="125">Low-batch autoregressive decode</text>
+  <text class="card-title" x="75" y="460">NCCL-heavy communication phase</text>
+  <text class="card-title" x="645" y="460">CPU or input-pipeline gaps</text>
+
+  <g transform="translate(75,150)">
+    <text class="label" x="0" y="15">GPU-Util</text><rect class="track" x="150" y="0" width="300" height="18" rx="9"/><rect class="high" x="150" y="0" width="285" height="18" rx="9"/><text class="value" x="465" y="14">high</text>
+    <text class="label" x="0" y="55">SM Active</text><rect class="track" x="150" y="40" width="300" height="18" rx="9"/><rect class="high" x="150" y="40" width="260" height="18" rx="9"/><text class="value" x="465" y="54">high</text>
+    <text class="label" x="0" y="95">Tensor activity</text><rect class="track" x="150" y="80" width="300" height="18" rx="9"/><rect class="high" x="150" y="80" width="255" height="18" rx="9"/><text class="value" x="465" y="94">high</text>
+    <text class="label" x="0" y="128">Device-memory activity</text><text class="label" x="0" y="146">or demand</text><rect class="track" x="205" y="120" width="245" height="18" rx="9"/><rect class="medium" x="205" y="120" width="135" height="18" rx="9"/><text class="value" x="465" y="134">medium</text>
+    <text class="label" x="0" y="175">MFU</text><rect class="track" x="150" y="160" width="300" height="18" rx="9"/><rect class="high" x="150" y="160" width="225" height="18" rx="9"/><text class="value" x="465" y="174">healthy</text>
+  </g>
+
+  <g transform="translate(645,150)">
+    <text class="label" x="0" y="15">GPU-Util</text><rect class="track" x="150" y="0" width="300" height="18" rx="9"/><rect class="high" x="150" y="0" width="270" height="18" rx="9"/><text class="value" x="465" y="14">high</text>
+    <text class="label" x="0" y="55">SM Active</text><rect class="track" x="150" y="40" width="300" height="18" rx="9"/><rect class="medium" x="150" y="40" width="175" height="18" rx="9"/><text class="value" x="465" y="54">mixed</text>
+    <text class="label" x="0" y="95">Tensor activity</text><rect class="track" x="150" y="80" width="300" height="18" rx="9"/><rect class="low" x="150" y="80" width="85" height="18" rx="9"/><text class="value" x="465" y="94">low</text>
+    <text class="label" x="0" y="128">Device-memory activity</text><text class="label" x="0" y="146">or demand</text><rect class="track" x="205" y="120" width="245" height="18" rx="9"/><rect class="high" x="205" y="120" width="225" height="18" rx="9"/><text class="value" x="465" y="134">high</text>
+    <text class="label" x="0" y="175">MFU</text><rect class="track" x="150" y="160" width="300" height="18" rx="9"/><rect class="low" x="150" y="160" width="75" height="18" rx="9"/><text class="value" x="465" y="174">low expected</text>
+  </g>
+
+  <g transform="translate(75,485)">
+    <text class="label" x="0" y="15">GPU-Util</text><rect class="track" x="150" y="0" width="300" height="18" rx="9"/><rect class="high" x="150" y="0" width="260" height="18" rx="9"/><text class="value" x="465" y="14">high</text>
+    <text class="label" x="0" y="55">SM Active</text><rect class="track" x="150" y="40" width="300" height="18" rx="9"/><rect class="medium" x="150" y="40" width="180" height="18" rx="9"/><text class="value" x="465" y="54">can be high</text>
+    <text class="label" x="0" y="95">Tensor activity</text><rect class="track" x="150" y="80" width="300" height="18" rx="9"/><rect class="low" x="150" y="80" width="35" height="18" rx="9"/><text class="value" x="465" y="94">low</text>
+    <text class="label" x="0" y="135">Network work</text><rect class="track" x="150" y="120" width="300" height="18" rx="9"/><rect class="high" x="150" y="120" width="275" height="18" rx="9"/><text class="value" x="465" y="134">high</text>
+    <text class="label" x="0" y="175">End-to-end MFU impact</text><rect class="track" x="170" y="160" width="160" height="18" rx="9"/><rect class="low" x="170" y="160" width="65" height="18" rx="9"/><text class="value" x="345" y="174">lowers end-to-end MFU</text>
+  </g>
+
+  <g transform="translate(645,485)">
+    <text class="label" x="0" y="15">GPU-Util</text><rect class="track" x="150" y="0" width="300" height="18" rx="9"/><rect class="low" x="150" y="0" width="65" height="18" rx="9"/><text class="value" x="465" y="14">low</text>
+    <text class="label" x="0" y="55">SM Active</text><rect class="track" x="150" y="40" width="300" height="18" rx="9"/><rect class="low" x="150" y="40" width="55" height="18" rx="9"/><text class="value" x="465" y="54">low</text>
+    <text class="label" x="0" y="95">Tensor activity</text><rect class="track" x="150" y="80" width="300" height="18" rx="9"/><rect class="low" x="150" y="80" width="35" height="18" rx="9"/><text class="value" x="465" y="94">low</text>
+    <text class="label" x="0" y="135">CPU waiting</text><rect class="track" x="150" y="120" width="300" height="18" rx="9"/><rect class="high" x="150" y="120" width="270" height="18" rx="9"/><text class="value" x="465" y="134">high</text>
+    <text class="label" x="0" y="175">MFU</text><rect class="track" x="150" y="160" width="300" height="18" rx="9"/><rect class="low" x="150" y="160" width="45" height="18" rx="9"/><text class="value" x="465" y="174">low</text>
+  </g>
+
+  <text class="note" x="600" y="752" text-anchor="middle">Qualitative patterns only. Align sampling windows and inspect exact counters before diagnosing a real job.</text>
+  <text class="note" x="600" y="776" text-anchor="middle">“Device-memory activity / demand” is qualitative, not a standardized bandwidth-utilization counter.</text>
+</svg>

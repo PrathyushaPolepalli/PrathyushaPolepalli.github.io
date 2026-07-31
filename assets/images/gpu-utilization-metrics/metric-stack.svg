@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img">
+  <title>GPU performance metrics measure different scopes</title>
+  <desc>Four horizontal layers compare GPU-Util, SM Active, Tensor pipe activity, and MFU, showing each metric's question, scope, and limitation.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fffdf8; }
+      .card { stroke-width: 2; }
+      .gpu { fill: #e6edf1; stroke: #315f7d; }
+      .sm { fill: #dce9df; stroke: #44735a; }
+      .tensor { fill: #f7dfd8; stroke: #b6432f; }
+      .mfu { fill: #eee6f2; stroke: #6e4f7d; }
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #20211f; }
+      .metric { font: 700 21px Inter, Arial, sans-serif; fill: #20211f; }
+      .question { font: 700 17px Inter, Arial, sans-serif; fill: #20211f; }
+      .small { font: 14px Inter, Arial, sans-serif; fill: #68665f; }
+      .note { font: 700 15px Inter, Arial, sans-serif; fill: #b6432f; }
+      .line { stroke: #a59c90; stroke-width: 2; stroke-dasharray: 8 7; }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="720"/>
+  <text class="title" x="55" y="48">“Utilization” changes meaning when the denominator changes</text>
+
+  <rect class="card gpu" x="55" y="85" width="1090" height="120" rx="18"/>
+  <text class="metric" x="85" y="125">GPU-Util</text>
+  <text class="question" x="300" y="125">Was one or more kernels executing?</text>
+  <text class="small" x="300" y="158">Device-level, recent NVML sampling interval</text>
+  <text class="small" x="770" y="158">Does not establish all-SM use, Tensor work, or FLOP rate</text>
+
+  <rect class="card sm" x="55" y="225" width="1090" height="120" rx="18"/>
+  <text class="metric" x="85" y="265">SM Active</text>
+  <text class="question" x="300" y="265">Did an SM have at least one warp assigned?</text>
+  <text class="small" x="300" y="290">Counter-derived per-SM-cycle ratio;</text>
+  <text class="small" x="300" y="312">aggregation depends on the tool and collection window</text>
+  <text class="small" x="770" y="298">Does not prove issue rate, Tensor use, or throughput</text>
+
+  <rect class="card tensor" x="55" y="365" width="1090" height="120" rx="18"/>
+  <text class="metric" x="85" y="405">Tensor pipe active</text>
+  <text class="question" x="300" y="405">Was any Tensor Core pipeline active?</text>
+  <text class="small" x="300" y="438">Pipeline-cycle activity for a named profiler metric</text>
+  <text class="small" x="770" y="438">Does not equal achieved Tensor TFLOP/s</text>
+
+  <rect class="card mfu" x="55" y="505" width="1090" height="120" rx="18"/>
+  <text class="metric" x="85" y="545">MFU</text>
+  <text class="question" x="300" y="545">How much useful model math finished relative to peak?</text>
+  <text class="small" x="300" y="578">Application-level FLOP accounting over one wall-clock interval</text>
+  <text class="small" x="770" y="578">Depends on the FLOP model and chosen peak</text>
+
+  <line class="line" x1="150" y1="660" x2="1050" y2="660"/>
+  <text class="note" x="600" y="690" text-anchor="middle">These are related observations, not percentages that can be subtracted or ranked as one ladder.</text>
+</svg>
