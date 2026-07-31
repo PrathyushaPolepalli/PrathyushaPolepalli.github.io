@@ -499,6 +499,114 @@ Before calling a GPU “underutilized,” answer:
 11. Are global tokens and model FLOPs counted exactly once across parallel ranks?
 12. Are prefill and decode reported separately?
 
+## Final mental model
+
+> GPU performance metrics are layers of evidence, not competing answers to one question. GPU-Util tells you whether the device was idle, SM Active tells you whether SMs had assigned work, Tensor-pipe activity tells you whether Tensor Core pipelines participated, and MFU tells you how much useful model work finished relative to a declared peak.
+
+Move through the layers in order:
+
+```text
+Is the GPU idle?
+    ↓
+Are the SMs receiving enough work?
+    ↓
+Are warps issuing or stalling?
+    ↓
+Which execution pipelines and memory paths are busy?
+    ↓
+Is that hardware activity producing useful end-to-end model progress?
+```
+
+No single percentage answers every step. Compare metrics over the same interval, preserve each metric's exact denominator, and judge the final result using the workload's real objective: training throughput, time to first token, inter-token latency, or request throughput.
+
+## Quick knowledge check
+
+Open each question to reveal the answer.
+
+<details class="knowledge-check">
+  <summary>1. Why can GPU-Util be 100% while the GPU is delivering far below peak performance?</summary>
+  <div class="knowledge-check__answer">
+    <p>GPU-Util measures whether one or more kernels executed during the sampled interval. A stream of small, memory-stalled, communication-heavy, or poorly shaped kernels can keep the device continuously busy without using all SMs, Tensor Core pipelines, or available FLOP capacity. Therefore, 100% GPU-Util proves that the GPU was not idle; it does not prove that the work was efficient.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>2. What is the key difference between GPU-Util and SM Active?</summary>
+  <div class="knowledge-check__answer">
+    <p>GPU-Util is a device-level sampled signal that asks whether any kernel was executing. SM Active is a finer-grained ratio that asks whether an SM had at least one assigned warp during a cycle. A small kernel can keep GPU-Util high while reaching only a fraction of the SMs, which produces much lower SM Active.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>3. Why are SM Active and occupancy not the same metric?</summary>
+  <div class="knowledge-check__answer">
+    <p>SM Active records whether an SM had at least one assigned warp. Occupancy measures how many warps are resident relative to the SM's maximum resident-warp capacity. Occupancy describes resource residency, while SM Active describes the presence of assigned work over time. Neither metric proves that warps were eligible to issue instructions or that the kernel achieved high throughput.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>4. How can SM Active be high while useful throughput remains low?</summary>
+  <div class="knowledge-check__answer">
+    <p>An SM counts as active even when its assigned warps are stalled on device-memory loads, dependencies, barriers, or communication. The GPU may therefore maintain many active SM cycles while issuing few useful instructions. Eligible-warps, issue-rate, stall-reason, memory-throughput, and roofline measurements are needed to explain the missing throughput.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>5. Why does Tensor-pipe activity not equal achieved Tensor Core TFLOP/s?</summary>
+  <div class="knowledge-check__answer">
+    <p>A Tensor-pipe activity metric usually reports cycles in which at least one Tensor pipeline was active. It does not say that every Tensor pipeline was full or that each active cycle delivered the maximum number of operations. Matrix dimensions, tile tails, precision, alignment, scheduling, memory delivery, and time spent outside GEMMs all affect achieved Tensor FLOP/s.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>6. Can Tensor-pipe activity be subtracted from SM Active to estimate CUDA-core work?</summary>
+  <div class="knowledge-check__answer">
+    <p>No. The two metrics represent overlapping observations and may use different scope, normalization, aggregation, and denominators. “An SM had a warp assigned” and “a Tensor pipeline was active” do not divide elapsed time into mutually exclusive categories. Use instruction- or pipeline-specific profiler metrics when you need an execution-unit breakdown.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>7. Why is MFU not available directly from <code>nvidia-smi</code>?</summary>
+  <div class="knowledge-check__answer">
+    <p>MFU is an application-level calculation, not a device-busy counter. It requires a useful-model FLOP estimate, a global amount of completed work, wall-clock time, participating GPU count, and a precision-appropriate hardware peak. Hardware telemetry alone cannot determine which executed operations represented useful model progress.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>8. Why can HFU be higher than MFU without improving training throughput?</summary>
+  <div class="knowledge-check__answer">
+    <p>MFU counts useful model FLOPs, while HFU can count additional hardware-executed FLOPs. Activation checkpointing, for example, recomputes forward operations during backward. That recomputation keeps the hardware busier and raises HFU, but it does not process more training tokens or complete more useful model work, so MFU does not increase by the same amount.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>9. Why must an MFU report declare its peak-FLOP denominator?</summary>
+  <div class="knowledge-check__answer">
+    <p>GPU peak rates differ by SKU, precision, Tensor Core mode, dense versus structured-sparse execution, MIG allocation, and clock assumption. Dividing dense BF16 work by an FP8 or sparse marketing peak makes the reported MFU artificially low and incomparable with correctly normalized results. The denominator must match the operations the workload actually executes.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>10. How should MFU be calculated for a distributed training job?</summary>
+  <div class="knowledge-check__answer">
+    <p>Count global useful model work once, then divide by one common wall-clock interval multiplied by the sum of the participating GPUs' selected peaks. Do not multiply model FLOPs by tensor- or pipeline-parallel degree because those ranks split one model computation. For data parallelism, count all globally processed tokens once rather than once per replica and then again globally.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>11. Why can low Tensor activity and low MFU be healthy during autoregressive decode?</summary>
+  <div class="knowledge-check__answer">
+    <p>Low-batch decode performs relatively little math per generated token while repeatedly reading model weights and KV-cache data. It is often constrained by device-memory bandwidth and latency rather than Tensor Core peak. A decode workload can therefore have low Tensor activity and training-style MFU while still meeting its intended inter-token latency and request-throughput targets.</p>
+  </div>
+</details>
+
+<details class="knowledge-check">
+  <summary>12. What does high Tensor activity combined with low MFU usually suggest?</summary>
+  <div class="knowledge-check__answer">
+    <p>It suggests that Tensor Core kernels are active during part of the run, but useful model math occupies too little of the full wall-clock interval. Communication, pipeline bubbles, data stalls, synchronization, small non-GEMM kernels, or activation recomputation may dominate the remaining time. Inspect a phase-level timeline and compare MFU with HFU before changing the GEMM kernels.</p>
+  </div>
+</details>
+
 ## Sources, attribution, and diagrams
 
 This article uses the shared discussion as an editorial starting point, then verifies metric definitions against NVIDIA documentation and published MFU literature. All prose and diagrams are original; no source figure, table, or documentation passage is reproduced.
@@ -520,4 +628,5 @@ All links were accessed on July 30, 2026.
 
 ## Changelog
 
+- **2026-07-30:** Added a final mental model and 12 expandable knowledge checks.
 - **2026-07-30:** Initial publication.
